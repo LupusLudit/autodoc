@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
-from tkinter import Tk, Label, Entry, Button, filedialog, messagebox
+from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, Image
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -12,7 +12,7 @@ class ScreenshotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Auto Screenshot Documenter")
-        self.root.geometry("500x300")
+        self.root.geometry("1024x720")
 
         # Variables for paths
         self.screenshot_dir = None
@@ -33,8 +33,11 @@ class ScreenshotApp:
         Button(root, text="Browse", command=self.set_doc_dir).pack()
 
         # Buttons
-        Button(root, text="OK", command=self.start_monitoring).pack(pady=10)
-        Button(root, text="CLOSE", command=root.quit).pack(pady=5)
+        Button(root, text="OK", command=self.start_monitoring, 
+               fg="black", bg="lime", font=("Arial", 12), relief="raised").pack(pady=10)
+        # Place the button at bottom-right with margin
+        Button(root, text="CLOSE", command=root.quit).place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+
 
         # Placeholder for screenshot preview
         self.image_label = Label(root)  
@@ -45,10 +48,12 @@ class ScreenshotApp:
         self.prompt_entry.insert(0, "Here enter the screenshot description")
         self.prompt_entry.pack_forget()  # Hide initially
 
-        self.save_button = Button(root, text="SAVE", command=self.save_screenshot)
+        self.save_button = Button(root, text="SAVE", command=self.save_screenshot,
+                                fg="black", bg="lime", font=("Arial", 12, "bold"), relief="raised")
         self.save_button.pack_forget()
 
-        self.discard_button = Button(root, text="DISCARD", command=self.discard_screenshot)
+        self.discard_button = Button(root, text="DISCARD", command=self.discard_screenshot,
+                                fg="black", bg="red", font=("Arial", 12, "bold"), relief="raised" )
         self.discard_button.pack_forget()
 
     def set_screenshot_dir(self):
@@ -79,7 +84,6 @@ class ScreenshotApp:
         self.screenshot_label = Label(root, text="No new screenshots taken", fg="gray")
         self.screenshot_label.pack(pady=50)
         self.image_label.pack()
-        Button(self.root, text="CLOSE", command=self.root.quit).pack(side="bottom", pady=10)
 
         # Start checking clipboard
         self.check_clipboard()
@@ -100,10 +104,30 @@ class ScreenshotApp:
         """Display the screenshot in the UI for user approval."""
         self.current_screenshot = image.copy()  # Keep the full-quality image for saving
 
-        # Create a resized preview (doesn't affect saved image)
-        preview_image = image.copy()
-        preview_image.thumbnail((400, 300))  # Resize only for display
-        self.screenshot_preview = ImageTk.PhotoImage(preview_image)
+    # Get the image size
+        width, height = image.size
+        
+        # Define a maximum width and height for the display
+        max_width, max_height = 400, 300
+
+        # Calculate the aspect ratio
+        aspect_ratio = width / height
+
+        # Resize the image while maintaining the aspect ratio
+        if width > max_width or height > max_height:
+            if aspect_ratio > 1:  # Landscape image
+                new_width = max_width
+                new_height = int(new_width / aspect_ratio)
+            else:  # Portrait or square image
+                new_height = max_height
+                new_width = int(new_height * aspect_ratio)
+            
+            resized_image = image.resize((new_width, new_height))
+        else:
+            resized_image = image
+
+        # Convert the image to a Tkinter-compatible photo image
+        self.screenshot_preview = ImageTk.PhotoImage(resized_image)
 
         # Update UI
         self.image_label.config(image=self.screenshot_preview)
