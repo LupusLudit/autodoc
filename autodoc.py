@@ -32,9 +32,27 @@ class ScreenshotApp:
         self.doc_entry.pack(pady=5)
         Button(root, text="Browse", command=self.set_doc_dir).pack()
 
+        Label(root, text="Enter Exercise number:").pack(pady=5)
+        self.exercise_entry  = Entry(root, width=50)
+        self.exercise_entry.pack(pady=5)
+
+        Label(root, text="Enter Main Title:").pack(pady=5)
+        self.title_entry  = Entry(root, width=50)
+        self.title_entry.pack(pady=5)
+
+        Label(root, text="Enter Name and Surname:").pack(pady=5)
+        self.name_entry  = Entry(root, width=50)
+        self.name_entry.pack(pady=5)
+
+        Label(root, text="Enter your Class:").pack(pady=5)
+        self.class_entry  = Entry(root, width=50)
+        self.class_entry.pack(pady=5)
+
         # Buttons
         Button(root, text="OK", command=self.start_monitoring, 
                fg="black", bg="lime", font=("Arial", 12), relief="raised").pack(pady=10)
+
+        Label()
         # Place the button at bottom-right with margin
         Button(root, text="CLOSE", command=root.quit).place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
 
@@ -195,11 +213,11 @@ class ScreenshotApp:
 
     def create_document_header(self, doc):
         """Creates a header for the document on the first page."""
-        self.add_styled_text(doc, "Exercise Number", bold=True, font_size=16, align="center")
-        self.add_styled_text(doc, "Title", bold=True, font_size=14, align="center")
-        self.add_styled_text(doc, "Name and Surname", font_size=12, align="center")
-        self.add_styled_text(doc, "Class", font_size=12, align="center")
-        self.add_styled_text(doc, f"Date: {datetime.now().strftime('%Y-%m-%d')}", font_size=12, align="center")
+        self.add_styled_text(doc, self.exercise_entry.get().strip() or "Exercise Number", bold=True, font_size=16, align="center")
+        self.add_styled_text(doc, self.title_entry.get().strip() or "Title", bold=True, font_size=14, align="center")
+        self.add_styled_text(doc, self.name_entry.get().strip() or "Name and Surname", font_size=12, align="center")
+        self.add_styled_text(doc, self.class_entry.get().strip() or "Class", font_size=12, align="center")
+        self.add_styled_text(doc, f"Datum: {datetime.now().strftime('%Y-%m-%d')}", font_size=12, align="center")
         doc.add_page_break()  # Start screenshots on the next page
 
     def add_styled_text(self, doc, text, bold=False, font_size=14, align="left"):
