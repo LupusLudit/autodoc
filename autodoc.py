@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
-from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, Image
+from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, PhotoImage
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -13,6 +13,9 @@ class ScreenshotApp:
         self.root = root
         self.root.title("Auto Screenshot Documenter")
         self.root.geometry("1024x720")
+        icon = PhotoImage(file="./img/folder.png")  # Load the image correctly
+        root.iconphoto(True, icon)  # Set the window icon
+
 
         # Variables for paths
         self.screenshot_dir = None
@@ -217,7 +220,7 @@ class ScreenshotApp:
         self.add_styled_text(doc, self.title_entry.get().strip() or "Title", bold=True, font_size=14, align="center")
         self.add_styled_text(doc, self.name_entry.get().strip() or "Name and Surname", font_size=12, align="center")
         self.add_styled_text(doc, self.class_entry.get().strip() or "Class", font_size=12, align="center")
-        self.add_styled_text(doc, f"Datum: {datetime.now().strftime('%Y-%m-%d')}", font_size=12, align="center")
+        self.add_styled_text(doc, f"Datum: {datetime.now().strftime('%d.%m.%Y')}", font_size=12, align="center")
         doc.add_page_break()  # Start screenshots on the next page
 
     def add_styled_text(self, doc, text, bold=False, font_size=14, align="left"):
