@@ -2,20 +2,25 @@ import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
 from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, PhotoImage
-from docx import Document
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
+from reportlab.pdfgen import canvas 
+from reportlab.pdfbase.ttfonts import TTFont 
+from reportlab.pdfbase import pdfmetrics
+from reportlab.lib.pagesizes import letter
+from PIL import Image
+from PyPDF2 import PdfReader, PdfWriter
+import os
+from datetime import datetime
 
 #pip install pillow python-docx
+#pip install PyPDF2
+#pip install reportlab
 
 class ScreenshotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Auto Screenshot Documenter")
         self.root.geometry("1024x720")
-        icon = PhotoImage(file="./img/folder.png")  # Load the image correctly
-        root.iconphoto(True, icon)  # Set the window icon
-
 
         # Variables for paths
         self.screenshot_dir = None
@@ -23,6 +28,7 @@ class ScreenshotApp:
         self.current_screenshot = None
         self.screenshot_preview = None
         self.previous_image = None
+        self.doc = None
 
         # UI Elements for path selection
         Label(root, text="Select Screenshot Directory:").pack(pady=5)
@@ -43,9 +49,13 @@ class ScreenshotApp:
         self.title_entry  = Entry(root, width=50)
         self.title_entry.pack(pady=5)
 
-        Label(root, text="Enter Name and Surname:").pack(pady=5)
+        Label(root, text="Enter your name:").pack(pady=5)
         self.name_entry  = Entry(root, width=50)
         self.name_entry.pack(pady=5)
+
+        Label(root, text="Enter your surname:").pack(pady=5)
+        self.surname_entry  = Entry(root, width=50)
+        self.surname_entry.pack(pady=5)
 
         Label(root, text="Enter your Class:").pack(pady=5)
         self.class_entry  = Entry(root, width=50)
@@ -86,10 +96,11 @@ class ScreenshotApp:
             self.screenshot_entry.insert(0, directory)
 
     def set_doc_dir(self):
-        """Set the directory where the document will be saved."""
-        directory = filedialog.askdirectory()
-        if directory:
-            self.doc_path = os.path.join(directory, "screenshots_document.docx")
+        """Set the PDF file path where the document will be saved."""
+        file_path = filedialog.asksaveasfilename(defaultextension=".pdf",
+                                                filetypes=[("PDF files", "*.pdf")])
+        if file_path:
+            self.doc_path = file_path
             self.doc_entry.delete(0, "end")
             self.doc_entry.insert(0, self.doc_path)
 
@@ -98,7 +109,7 @@ class ScreenshotApp:
         if not self.screenshot_dir or not self.doc_path:
             messagebox.showwarning("Warning", "Please select valid directories first!")
             return
-
+        self.doc = PdfSaver(self.doc_path, self.exercise_entry.get().strip(), self.title_entry.get().strip(), self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
         # Hide initial setup UI
         for widget in self.root.winfo_children():
             widget.pack_forget()
@@ -170,21 +181,7 @@ class ScreenshotApp:
         try:
             # Save the screenshot as a PNG
             self.current_screenshot.save(filename, "PNG")
-
-            # Load or create the document
-            if os.path.exists(self.doc_path):
-                doc = Document(self.doc_path)
-            else:
-                doc = Document()
-                self.create_document_header(doc)
-
-            # Add description and image
-            self.add_styled_text(doc, description, font_size=12)
-            doc.add_picture(filename, width=Inches(6))
-
-            # Save document
-            doc.save(self.doc_path)
-
+            self.doc.addImage(filename, description)
             print(f"Screenshot saved: {filename}")
             messagebox.showinfo("Success", "Screenshot saved to document!")
 
@@ -214,29 +211,120 @@ class ScreenshotApp:
         # Delay clipboard checking to ensure the UI resets properly
         self.root.after(1500, self.check_clipboard)
 
-    def create_document_header(self, doc):
-        """Creates a header for the document on the first page."""
-        self.add_styled_text(doc, self.exercise_entry.get().strip() or "Exercise Number", bold=True, font_size=16, align="center")
-        self.add_styled_text(doc, self.title_entry.get().strip() or "Title", bold=True, font_size=14, align="center")
-        self.add_styled_text(doc, self.name_entry.get().strip() or "Name and Surname", font_size=12, align="center")
-        self.add_styled_text(doc, self.class_entry.get().strip() or "Class", font_size=12, align="center")
-        self.add_styled_text(doc, f"Datum: {datetime.now().strftime('%d.%m.%Y')}", font_size=12, align="center")
-        doc.add_page_break()  # Start screenshots on the next page
+class PdfSaver:
+    def __init__(self, filename, title, exercise_number, name, surname, student_class):
+        self.filename = filename
+        self.title = title
+        # Get the height of a letter-sized page
+        self.width, self.height = letter
 
-    def add_styled_text(self, doc, text, bold=False, font_size=14, align="left"):
-        """Adds a styled paragraph to the document."""
-        para = doc.add_paragraph()
-        run = para.add_run(text)
-        run.bold = bold
-        run.font.size = Pt(font_size)
+        self.description_height = 20
 
-        if align == "center":
-            para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        elif align == "right":
-            para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        self.segment_height = self.height / 2
+
+        self.image_margin = 10
+        self.image_width = self.width - self.image_margin * 2
+        self.image_height = self.segment_height - self.description_height - self.image_margin * 2
+
+        self.temporary_addition_path = os.path.join(os.path.dirname(__file__), "temp_add.pdf")
+        
+
+        self.register_fonts()
+
+        if(not os.path.exists(self.filename)):
+            self.create_pdf(exercise_number, title, name, surname, student_class)
+
+    def register_fonts(self):
+        """Register the DejaVuSans font that supports UTF-8 characters."""
+        # Register the DejaVuSans font (you need to have this font file on your system)
+        try:
+            pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
+            print("Font registration succesfull")
+        except Exception as e:
+            print(f"Font registration failed: {e}")
+
+    def create_pdf(self, exercise_number, title, name, surname, student_class):
+        # Initialize canvas
+        self.pdf = canvas.Canvas(self.filename)
+        self.pdf.setTitle(title)
+
+        # Increase font size for better readability
+        self.pdf.setFont('DejaVuSans', 14)
+
+        # Draw exercise title centered at the top of the page
+        self.pdf.drawCentredString(self.width / 2, self.height - 120, f"CV {exercise_number}: {title}")
+        self.pdf.drawCentredString(self.width / 2, self.height - 140, f"title")
+
+        # Add student information below the title
+        self.pdf.setFont('DejaVuSans', 12)
+        self.pdf.drawCentredString(self.width / 2, self.height - 180, f"Jméno a příjmení: {name} {surname}")
+        self.pdf.drawCentredString(self.width / 2, self.height - 200, f"Třída: {student_class}")
+
+        # Add the current date at the bottom, centered, in Czech format (DD.MM.YYYY)
+        current_date = datetime.now().strftime("%d. %m. %Y")  # Format the date in Czech style
+        self.pdf.setFont('DejaVuSans', 12)
+        self.pdf.drawCentredString(self.width / 2, 40, f"Datum: {current_date}")
+
+        # Save the PDF
+        self.pdf.save()
+        print("Creating pdf")
+
+    def appendPage(self):
+        writer = PdfWriter()
+
+        # Read the existing PDF using PdfReader
+        with open(self.filename, "rb") as existing_file:
+            reader = PdfReader(existing_file)
+            
+            # Create a PdfWriter to hold the final output
+
+            # Add all the pages from the existing PDF
+            for page in range(len(reader.pages)):
+                writer.add_page(reader.pages[page])
+
+            # Add the new page created with ReportLab
+            with open(self.temporary_addition_path , "rb") as new_file:
+                new_reader = PdfReader(new_file)
+                writer.add_page(new_reader.pages[0])
+
+        # Write the combined PDF to the output file
+        with open(self.filename, "wb") as output_file:
+            writer.write(output_file)
+        print("appednding page")
+
+    def addImage(self, path, description):
+        self.pdf = canvas.Canvas(self.temporary_addition_path) 
+        self.pdf.setTitle(self.title) 
+
+        # Open the image using PIL to get its dimensions
+        img = Image.open(path)
+        img_width, img_height = img.size
+
+        # Define the region (width and height) where the image should fit
+        region_width = self.image_width  # The width of the region
+        region_height = self.image_height  # The height of the region
+
+        # Calculate the aspect ratio of the image
+        aspect_ratio = img_width / img_height
+
+        # Determine the new width and height to fit the image in the region while maintaining the aspect ratio
+        if region_width / region_height > aspect_ratio:
+            # Scale based on the height
+            new_height = region_height
+            new_width = region_height * aspect_ratio
         else:
-            para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+            # Scale based on the width
+            new_width = region_width
+            new_height = region_width / aspect_ratio
+        
+        self.pdf.setFont('DejaVuSans', 18)
+        self.pdf.drawCentredString(self.width / 2, self.height - 50, description)
+        self.pdf.drawImage(path, self.width / 2 - new_width / 2, self.height / 2 - new_height / 2, new_width, new_height) 
+        self.pdf.showPage()
 
+        self.pdf.save()
+        self.appendPage()
+        print("adding image")
 
 if __name__ == "__main__":
     root = Tk()
