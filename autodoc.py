@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
-from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, PhotoImage
+from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, StringVar, Radiobutton, Frame, Text
 
 from reportlab.pdfgen import canvas 
 from reportlab.pdfbase.ttfonts import TTFont 
@@ -30,62 +30,85 @@ class ScreenshotApp:
         self.previous_image = None
         self.doc = None
 
+        # Mode Selection (Existing file or New file)
+        self.mode_var = StringVar(value="new")  # Default: create new file
+
+        Label(root, text="Choose Mode:").pack(pady=5)
+        Radiobutton(root, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
+        Radiobutton(root, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
+
         # UI Elements for path selection
         Label(root, text="Select Screenshot Directory:").pack(pady=5)
         self.screenshot_entry = Entry(root, width=50)
         self.screenshot_entry.pack(pady=5)
+        self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
         Button(root, text="Browse", command=self.set_screenshot_dir).pack()
 
-        Label(root, text="Select Document Directory:").pack(pady=5)
+        Label(root, text="Select Document File:").pack(pady=5)
         self.doc_entry = Entry(root, width=50)
         self.doc_entry.pack(pady=5)
-        Button(root, text="Browse", command=self.set_doc_dir).pack()
+        self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
+        Button(root, text="Browse", command=self.browse_doc).pack()
 
-        Label(root, text="Enter Exercise number:").pack(pady=5)
-        self.exercise_entry  = Entry(root, width=50)
+        # Metadata fields (Only shown for new PDFs)
+        self.metadata_frame = Frame(root)
+        self.metadata_frame.pack(pady=10)
+
+        Label(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
+        self.exercise_entry = Entry(self.metadata_frame, width=50)
         self.exercise_entry.pack(pady=5)
 
-        Label(root, text="Enter Main Title:").pack(pady=5)
-        self.title_entry  = Entry(root, width=50)
+        Label(self.metadata_frame, text="Enter Main Title:").pack(pady=5)
+        self.title_entry = Entry(self.metadata_frame, width=50)
         self.title_entry.pack(pady=5)
 
-        Label(root, text="Enter your name:").pack(pady=5)
-        self.name_entry  = Entry(root, width=50)
+        Label(self.metadata_frame, text="Enter your name:").pack(pady=5)
+        self.name_entry = Entry(self.metadata_frame, width=50)
         self.name_entry.pack(pady=5)
 
-        Label(root, text="Enter your surname:").pack(pady=5)
-        self.surname_entry  = Entry(root, width=50)
+        Label(self.metadata_frame, text="Enter your surname:").pack(pady=5)
+        self.surname_entry = Entry(self.metadata_frame, width=50)
         self.surname_entry.pack(pady=5)
 
-        Label(root, text="Enter your Class:").pack(pady=5)
-        self.class_entry  = Entry(root, width=50)
+        Label(self.metadata_frame, text="Enter your Class:").pack(pady=5)
+        self.class_entry = Entry(self.metadata_frame, width=50)
         self.class_entry.pack(pady=5)
 
-        # Buttons
-        Button(root, text="OK", command=self.start_monitoring, 
-               fg="black", bg="lime", font=("Arial", 12), relief="raised").pack(pady=10)
+        # OK Button
+        self.ok_button = Button(root, text="OK", command=self.start_monitoring, fg="black", bg="lime", font=("Arial", 12), relief="raised")
+        self.ok_button.place(relx=0.5, rely=1.0, anchor="s", y=-10)  # Centered at the bottom
 
-        Label()
-        # Place the button at bottom-right with margin
+        # Close Button
         Button(root, text="CLOSE", command=root.quit).place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
 
-
-        # Placeholder for screenshot preview
         self.image_label = Label(root)  
         self.image_label.pack(pady=10)
 
-        self.prompt_entry = Entry(root, width=50)
+        # Screenshot Description (Initially Hidden)
+        self.prompt_entry = Text(root, width=50, height=7, wrap="word")
         self.prompt_entry.pack(pady=5)
-        self.prompt_entry.insert(0, "Here enter the screenshot description")
-        self.prompt_entry.pack_forget()  # Hide initially
+        self.prompt_entry.insert("1.0", "Here enter the screenshot description")
+        self.prompt_entry.pack_forget()
 
-        self.save_button = Button(root, text="SAVE", command=self.save_screenshot,
-                                fg="black", bg="lime", font=("Arial", 12, "bold"), relief="raised")
+        # Save and Discard Buttons (Initially Hidden)
+        self.save_button = Button(root, text="SAVE", command=self.save_screenshot, fg="black", bg="lime", font=("Arial", 12, "bold"), relief="raised")
         self.save_button.pack_forget()
 
-        self.discard_button = Button(root, text="DISCARD", command=self.discard_screenshot,
-                                fg="black", bg="red", font=("Arial", 12, "bold"), relief="raised" )
+        self.discard_button = Button(root, text="DISCARD", command=self.discard_screenshot, fg="black", bg="red", font=("Arial", 12, "bold"), relief="raised")
         self.discard_button.pack_forget()
+
+        self.toggle_mode()  # Initialize correct visibility
+
+    def toggle_mode(self):
+        """Show or hide metadata fields based on selected mode."""
+        if self.mode_var.get() == "new":
+            self.metadata_frame.pack(pady=10)
+            self.doc_entry.delete(0, "end")
+            self.doc_entry.insert(0, "Choose directory for new PDF")
+        else:
+            self.metadata_frame.pack_forget()
+            self.doc_entry.delete(0, "end")
+            self.doc_entry.insert(0, "Choose existing PDF file")
 
     def set_screenshot_dir(self):
         """Set the directory where screenshots will be saved."""
@@ -95,20 +118,39 @@ class ScreenshotApp:
             self.screenshot_entry.delete(0, "end")
             self.screenshot_entry.insert(0, directory)
 
-    def set_doc_dir(self):
-        """Set the PDF file path where the document will be saved."""
-        file_path = filedialog.asksaveasfilename(defaultextension=".pdf",
-                                                filetypes=[("PDF files", "*.pdf")])
-        if file_path:
-            self.doc_path = file_path
-            self.doc_entry.delete(0, "end")
-            self.doc_entry.insert(0, self.doc_path)
+    def browse_doc(self):
+        """Set the PDF file path based on selected mode."""
+        if self.mode_var.get() == "new":
+            file_path = filedialog.askdirectory()
+            if file_path:
+                self.doc_path = os.path.join(file_path, "new_autodoc_file.pdf")
+                self.doc_entry.delete(0, "end")
+                self.doc_entry.insert(0, file_path)
+        else:
+            file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+            if file_path:
+                # Check if the selected file exists
+                if not os.path.isfile(file_path):
+                    messagebox.showerror("Error", "The selected file path is invalid or does not exist.")
+                else:
+                    self.doc_path = file_path
+                    self.doc_entry.delete(0, "end")
+                    self.doc_entry.insert(0, file_path)
+
+    def update_screenshot_dir(self):
+        """Update the screenshot directory from manual input."""
+        self.screenshot_dir = self.screenshot_entry.get()
+
+    def update_doc_path(self):
+        """Update the document path from manual input."""
+        self.doc_path = self.doc_entry.get()
 
     def start_monitoring(self):
         """Start monitoring clipboard for screenshots."""
         if not self.screenshot_dir or not self.doc_path:
             messagebox.showwarning("Warning", "Please select valid directories first!")
             return
+        self.ok_button.place_forget()
         self.doc = PdfSaver(self.doc_path, self.exercise_entry.get().strip(), self.title_entry.get().strip(), self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
         # Hide initial setup UI
         for widget in self.root.winfo_children():
@@ -176,7 +218,7 @@ class ScreenshotApp:
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = os.path.join(self.screenshot_dir, f"screenshot_{timestamp}.png")
-        description = self.prompt_entry.get().strip() or "Here enter the screenshot description"
+        description = self.prompt_entry.get("1.0", "end-1c").strip() or "Here enter the screenshot description"
 
         try:
             # Save the screenshot as a PNG
@@ -210,6 +252,7 @@ class ScreenshotApp:
         
         # Delay clipboard checking to ensure the UI resets properly
         self.root.after(1500, self.check_clipboard)
+
 
 class PdfSaver:
     def __init__(self, filename, title, exercise_number, name, surname, student_class):
@@ -252,7 +295,7 @@ class PdfSaver:
         self.pdf.setFont('DejaVuSans', 14)
 
         # Draw exercise title centered at the top of the page
-        self.pdf.drawCentredString(self.width / 2, self.height - 120, f"CV {exercise_number}: {title}")
+        self.pdf.drawCentredString(self.width / 2, self.height - 120, f"CV {exercise_number}")
         self.pdf.drawCentredString(self.width / 2, self.height - 140, f"title")
 
         # Add student information below the title
