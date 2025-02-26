@@ -39,13 +39,13 @@ class ScreenshotApp:
 
         # UI Elements for path selection
         Label(root, text="Select Screenshot Directory:").pack(pady=5)
-        self.screenshot_entry = Entry(root, width=50)
+        self.screenshot_entry = Entry(root, width=75)
         self.screenshot_entry.pack(pady=5)
         self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
         Button(root, text="Browse", command=self.set_screenshot_dir).pack()
 
         Label(root, text="Select Document File:").pack(pady=5)
-        self.doc_entry = Entry(root, width=50)
+        self.doc_entry = Entry(root, width=75)
         self.doc_entry.pack(pady=5)
         self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
         Button(root, text="Browse", command=self.browse_doc).pack()
@@ -53,6 +53,11 @@ class ScreenshotApp:
         # Metadata fields (Only shown for new PDFs)
         self.metadata_frame = Frame(root)
         self.metadata_frame.pack(pady=10)
+
+        Label(self.metadata_frame, text="Enter new file name:").pack(pady=5)
+        self.fileName_entry = Entry(self.metadata_frame, width=50)
+        self.fileName_entry.pack(pady=5)
+        self.fileName_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
 
         Label(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
         self.exercise_entry = Entry(self.metadata_frame, width=50)
@@ -123,7 +128,10 @@ class ScreenshotApp:
         if self.mode_var.get() == "new":
             file_path = filedialog.askdirectory()
             if file_path:
-                self.doc_path = os.path.join(file_path, "new_autodoc_file.pdf")
+                if self.fileName_entry.get():
+                    self.doc_path = os.path.join(file_path, f"{self.fileName_entry.get()}.pdf")
+                else:
+                    self.doc_path = os.path.join(file_path, "new_autodoc_file.pdf")
                 self.doc_entry.delete(0, "end")
                 self.doc_entry.insert(0, file_path)
         else:
@@ -142,25 +150,58 @@ class ScreenshotApp:
         self.screenshot_dir = self.screenshot_entry.get()
 
     def update_doc_path(self):
-        """Update the document path from manual input."""
-        self.doc_path = self.doc_entry.get()
+        """Validate the document path based on the selected mode."""
+        file_path = self.doc_entry.get().strip()
+
+        if self.mode_var.get() == "new":
+            # Get the entered filename
+            file_name = self.fileName_entry.get().strip()
+
+            if file_name:
+                self.doc_path = os.path.join(file_path, f"{file_name}.pdf")
+            else:
+                self.doc_path = os.path.join(file_path, "new_autodoc_file.pdf")
+        else:
+            self.doc_path = file_path
 
     def start_monitoring(self):
         """Start monitoring clipboard for screenshots."""
+        
         if not self.screenshot_dir or not self.doc_path:
             messagebox.showwarning("Warning", "Please select valid directories first!")
             return
+
+        if not os.path.isdir(self.screenshot_dir):
+            messagebox.showwarning("Warning", "Please select a valid screenshot directory")
+            return
+
+        # If in 'new' mode, check if the directory exists instead of checking for a file
+        if self.mode_var.get() == "new":
+            doc_dir = os.path.dirname(self.doc_path)
+            if not os.path.isdir(doc_dir):
+                messagebox.showwarning("Warning", "Please select a valid directory for the PDF file.")
+                return
+        else:
+            # For 'existing' mode, check if the file exists and is a valid PDF
+            if not (os.path.isfile(self.doc_path) and self.doc_path.lower().endswith(".pdf")):
+                messagebox.showwarning("Warning", "Please select an existing PDF file.")
+                return
+
         self.ok_button.place_forget()
-        self.doc = PdfSaver(self.doc_path, self.exercise_entry.get().strip(), self.title_entry.get().strip(), self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
+        self.doc = PdfSaver(self.doc_path, self.exercise_entry.get().strip(), self.title_entry.get().strip(),
+                            self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
+
         # Hide initial setup UI
         for widget in self.root.winfo_children():
             widget.pack_forget()
-        self.screenshot_label = Label(root, text="No new screenshots taken", fg="gray")
+        
+        self.screenshot_label = Label(self.root, text="No new screenshots taken", fg="gray")
         self.screenshot_label.pack(pady=50)
         self.image_label.pack()
 
         # Start checking clipboard
         self.check_clipboard()
+
 
     def check_clipboard(self):
         """Continuously monitor the clipboard for new screenshots."""
@@ -360,14 +401,39 @@ class PdfSaver:
             new_width = region_width
             new_height = region_width / aspect_ratio
         
-        self.pdf.setFont('DejaVuSans', 18)
-        self.pdf.drawCentredString(self.width / 2, self.height - 50, description)
+        font_size = 18
+        max_width = self.width - 40
+        self.pdf.setFont('DejaVuSans', font_size)
+        lines = self.wrap_text(description, font_size, max_width)
+        y_position = self.height - 50  # Start position for the text
+
+        for line in lines:
+            self.pdf.drawCentredString(self.width / 2, y_position, line)  # Adjust x, y to position text
+            y_position -= font_size + 4
+            
         self.pdf.drawImage(path, self.width / 2 - new_width / 2, self.height / 2 - new_height / 2, new_width, new_height) 
         self.pdf.showPage()
 
         self.pdf.save()
         self.appendPage()
         print("adding image")
+
+    def wrap_text(self, description, font_size, max_width):
+        lines = []
+        words = description.split()
+        current_line = ""
+        self.pdf.setFont('DejaVuSans', font_size)
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            line_width = self.pdf.stringWidth(test_line)
+            if line_width < max_width:
+                current_line = test_line
+            else:
+                lines.append(current_line)
+                current_line = word
+        if current_line:  # Add the last line
+            lines.append(current_line)
+        return lines
 
 if __name__ == "__main__":
     root = Tk()
