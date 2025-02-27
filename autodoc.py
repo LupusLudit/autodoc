@@ -2,19 +2,20 @@ import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
 from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, StringVar, Radiobutton, Frame, Text
-
+import json
+import hashlib
 from reportlab.pdfgen import canvas 
 from reportlab.pdfbase.ttfonts import TTFont 
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.pagesizes import letter
 from PIL import Image
 from PyPDF2 import PdfReader, PdfWriter
-import os
 from datetime import datetime
 
-#pip install pillow python-docx
 #pip install PyPDF2
 #pip install reportlab
+
+#Note: The pdf file cannot be opened in another program while using autodoc
 
 class ScreenshotApp:
     def __init__(self, root):
@@ -149,6 +150,8 @@ class ScreenshotApp:
         """Update the screenshot directory from manual input."""
         self.screenshot_dir = self.screenshot_entry.get()
 
+
+    #add file already exists check if the we are adding a new file
     def update_doc_path(self):
         """Validate the document path based on the selected mode."""
         file_path = self.doc_entry.get().strip()
@@ -299,6 +302,8 @@ class PdfSaver:
     def __init__(self, filename, title, exercise_number, name, surname, student_class):
         self.filename = filename
         self.title = title
+        # Count variable, so we now which screenshot we are describing
+        self.count = 1
         # Get the height of a letter-sized page
         self.width, self.height = letter
 
@@ -317,6 +322,10 @@ class PdfSaver:
 
         if(not os.path.exists(self.filename)):
             self.create_pdf(exercise_number, title, name, surname, student_class)
+            self.save_count()
+        else:
+            self.count = self.load_count()
+
 
     def register_fonts(self):
         """Register the DejaVuSans font that supports UTF-8 characters."""
@@ -401,10 +410,10 @@ class PdfSaver:
             new_width = region_width
             new_height = region_width / aspect_ratio
         
-        font_size = 18
+        font_size = 15
         max_width = self.width - 40
         self.pdf.setFont('DejaVuSans', font_size)
-        lines = self.wrap_text(description, font_size, max_width)
+        lines = self.wrap_text(f"{self.count}. {description}", font_size, max_width)
         y_position = self.height - 50  # Start position for the text
 
         for line in lines:
@@ -416,25 +425,76 @@ class PdfSaver:
 
         self.pdf.save()
         self.appendPage()
+        #incrementing count
+        self.count += 1
+        self.save_count()
         print("adding image")
 
     def wrap_text(self, description, font_size, max_width):
         lines = []
-        words = description.split()
-        current_line = ""
         self.pdf.setFont('DejaVuSans', font_size)
-        for word in words:
-            test_line = current_line + " " + word if current_line else word
-            line_width = self.pdf.stringWidth(test_line)
-            if line_width < max_width:
-                current_line = test_line
-            else:
+
+        paragraphs = description.split("\n")
+
+        for paragraph in paragraphs:
+            words = paragraph.split()
+            current_line = ""
+
+            for word in words:
+                test_line = current_line + " " + word if current_line else word
+                line_width = self.pdf.stringWidth(test_line)
+
+                if line_width < max_width:
+                    current_line = test_line
+                else:
+                    lines.append(current_line)
+                    current_line = word
+            
+            if current_line:  # Add the last line of the paragraph
                 lines.append(current_line)
-                current_line = word
-        if current_line:  # Add the last line
-            lines.append(current_line)
+        
         return lines
 
+    def get_file_key(self, filename):
+        """Generate a unique key for the file path using a hash function."""
+        return hashlib.md5(os.path.abspath(filename).encode()).hexdigest()
+
+
+    def save_count(self):
+        """Save the current count to count.json with the filename as a hashed key."""
+        count_file = "count.json"
+        file_key = self.get_file_key(self.filename)  # Convert filename to a safe key
+
+        if os.path.exists(count_file):
+            with open(count_file, "r") as file:
+                try:
+                    count_data = json.load(file)
+                except json.JSONDecodeError:
+                    count_data = {}  # Reset if JSON is corrupted
+        else:
+            count_data = {}
+
+        count_data[file_key] = self.count  # Store count for this specific file
+
+        # Pretty-print JSON for readability
+        with open(count_file, "w") as file:
+            json.dump(count_data, file, indent=4)
+
+
+    def load_count(self):
+        """Load the count for the specific file from count.json if it exists."""
+        count_file = "count.json"
+        file_key = self.get_file_key(self.filename)  # Convert filename to a safe key
+        if os.path.exists(count_file):
+            with open(count_file, "r") as file:
+                try:
+                    count_data = json.load(file)
+                except json.JSONDecodeError:
+                    return 1  # Default if file is corrupted
+
+                return count_data.get(file_key, 1)  # Default to 1 if not found
+        return 1  # Default count if file doesn't exist
+    
 if __name__ == "__main__":
     root = Tk()
     app = ScreenshotApp(root)
