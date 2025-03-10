@@ -1,3 +1,34 @@
+import subprocess
+import sys
+
+class AutoInstaller:
+    @staticmethod
+    def install_packages():
+        required_packages = [
+            "Pillow",        # for PIL
+            "reportlab",     # for PDF generation
+            "PyPDF2"         # for working with PDFs
+        ]
+
+        for package in required_packages:
+            try:
+                __import__(AutoInstaller.get_import_name(package))
+            except ImportError:
+                print(f"[INFO] Installing missing package: {package}")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+    @staticmethod
+    def get_import_name(package_name):
+        # This handles the fact that some packages have different import names
+        mapping = {
+            "Pillow": "PIL",
+            "PyPDF2": "PyPDF2",
+            "reportlab": "reportlab"
+        }
+        return mapping.get(package_name, package_name)
+
+AutoInstaller.install_packages()
+
 import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
@@ -12,6 +43,7 @@ from PIL import Image
 from PyPDF2 import PdfReader, PdfWriter
 from datetime import datetime
 
+#If AutoInstaller doesnt work install these packages
 #pip install PyPDF2
 #pip install reportlab
 
@@ -197,7 +229,7 @@ class ScreenshotApp:
                 return
 
         self.ok_button.place_forget()
-        self.doc = PdfSaver(self.prompt_mode_var.get(), self.doc_path, self.exercise_entry.get().strip(), self.title_entry.get().strip(),
+        self.doc = PdfSaver(self.prompt_mode_var.get(), self.doc_path, self.title_entry.get().strip(), self.exercise_entry.get().strip(),
                             self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
 
         # Hide initial setup UI
@@ -342,7 +374,7 @@ class PdfSaver:
         self.pdf.drawCentredString(self.width / 2, self.height - 140, title)
 
         self.pdf.setFont('DejaVuSans', 12)
-        self.pdf.drawCentredString(self.width / 2, self.height - 180, f"Jméno a příjmení: {name} {surname}")
+        self.pdf.drawCentredString(self.width / 2, self.height - 180, f"{name} {surname}")
         self.pdf.drawCentredString(self.width / 2, self.height - 200, f"Třída: {student_class}")
 
         current_date = datetime.now().strftime("%d. %m. %Y")
