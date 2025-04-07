@@ -7,7 +7,8 @@ class AutoInstaller:
         required_packages = [
             "Pillow",        # for PIL
             "reportlab",     # for PDF generation
-            "PyPDF2"         # for working with PDFs
+            "PyPDF2",         # for working with PDFs
+            "customtkinter"
         ]
 
         for package in required_packages:
@@ -23,7 +24,8 @@ class AutoInstaller:
         mapping = {
             "Pillow": "PIL",
             "PyPDF2": "PyPDF2",
-            "reportlab": "reportlab"
+            "reportlab": "reportlab",
+            "customtkinter": "customtkinter"
         }
         return mapping.get(package_name, package_name)
 
@@ -32,7 +34,8 @@ AutoInstaller.install_packages()
 import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
-from tkinter import Tk, Label, Entry, Button, filedialog, messagebox, StringVar, Radiobutton, Frame, Text
+from customtkinter import*
+from tkinter import filedialog, messagebox
 import json
 import hashlib
 from reportlab.pdfgen import canvas 
@@ -53,7 +56,7 @@ class ScreenshotApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Auto Screenshot Documenter")
-        self.root.geometry("1024x800")
+        self.root.geometry("1024x950")
 
         # Variables for paths
         self.screenshot_dir = None
@@ -66,93 +69,109 @@ class ScreenshotApp:
         # Mode Selection (Existing file or New file)
         self.mode_var = StringVar(value="new")  # Default: create new file
 
-        Label(root, text="Choose Mode:").pack(pady=5)
-        Radiobutton(root, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
-        Radiobutton(root, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
+        CTkLabel(root, text="Choose Mode:").pack(pady=5)
+        CTkRadioButton(root, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
+        CTkRadioButton(root, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
 
         # UI Elements for path selection
-        Label(root, text="Select Screenshot Directory:").pack(pady=5)
-        self.screenshot_entry = Entry(root, width=75)
+        CTkLabel(root, text="Select Screenshot Directory:").pack(pady=5)
+        self.screenshot_entry = CTkEntry(root, width=400)
         self.screenshot_entry.pack(pady=5)
         self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
-        Button(root, text="Browse", command=self.set_screenshot_dir).pack()
+        CTkButton(root, text="Browse", command=self.set_screenshot_dir, corner_radius=15).pack()
 
-        Label(root, text="Select Document File:").pack(pady=5)
-        self.doc_entry = Entry(root, width=75)
+        CTkLabel(root, text="Select Document File:").pack(pady=5)
+        self.doc_entry = CTkEntry(root, width=400)
         self.doc_entry.pack(pady=5)
         self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
-        Button(root, text="Browse", command=self.browse_doc).pack()
+        CTkButton(root, text="Browse", command=self.browse_doc, corner_radius=15).pack()
 
         # Metadata fields (Only shown for new PDFs)
-        self.metadata_frame = Frame(root)
+        self.metadata_frame = CTkFrame(root)
         self.metadata_frame.pack(pady=10)
 
-        Label(self.metadata_frame, text="Enter new file name:").pack(pady=5)
-        self.fileName_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter new file name:").pack(pady=5)
+        self.fileName_entry = CTkEntry(self.metadata_frame, width=300)
         self.fileName_entry.pack(pady=5)
         self.fileName_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
 
-        Label(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
-        self.exercise_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
+        self.exercise_entry = CTkEntry(self.metadata_frame, width=300)
         self.exercise_entry.pack(pady=5)
 
-        Label(self.metadata_frame, text="Enter Main Title:").pack(pady=5)
-        self.title_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter Main Title:").pack(pady=5)
+        self.title_entry = CTkEntry(self.metadata_frame, width=300)
         self.title_entry.pack(pady=5)
 
-        Label(self.metadata_frame, text="Enter your name:").pack(pady=5)
-        self.name_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter your name:").pack(pady=5)
+        self.name_entry = CTkEntry(self.metadata_frame, width=300)
         self.name_entry.pack(pady=5)
 
-        Label(self.metadata_frame, text="Enter your surname:").pack(pady=5)
-        self.surname_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter your surname:").pack(pady=5)
+        self.surname_entry = CTkEntry(self.metadata_frame, width=300)
         self.surname_entry.pack(pady=5)
 
-        Label(self.metadata_frame, text="Enter your Class:").pack(pady=5)
-        self.class_entry = Entry(self.metadata_frame, width=50)
+        CTkLabel(self.metadata_frame, text="Enter your Class:").pack(pady=5)
+        self.class_entry = CTkEntry(self.metadata_frame, width=300)
         self.class_entry.pack(pady=5)
         
         self.prompt_mode_var = StringVar(value="regular")
 
-        Label(self.metadata_frame, text="Choose prompt mode:").pack(pady=5)
-        Radiobutton(self.metadata_frame, text="Regular prompts (no numbering)", variable=self.prompt_mode_var, value="regular").pack()
-        Radiobutton(self.metadata_frame, text="Automatic prompt numbering", variable=self.prompt_mode_var, value="numbered").pack()
+        CTkLabel(self.metadata_frame, text="Choose prompt mode:").pack(pady=5)
+        CTkRadioButton(self.metadata_frame, text="Regular prompts (no numbering)", variable=self.prompt_mode_var, value="regular").pack()
+        CTkRadioButton(self.metadata_frame, text="Automatic prompt numbering", variable=self.prompt_mode_var, value="numbered").pack()
 
         # OK Button
-        self.ok_button = Button(root, text="OK", command=self.start_monitoring, fg="black", bg="lime", font=("Arial", 12), relief="raised")
+        self.ok_button = CTkButton(root, text="OK", command=self.start_monitoring,
+                                fg_color="lime green", text_color="black", 
+                                corner_radius=20, border_width=2, border_color="green",
+                                hover_color="#90ee90")
         self.ok_button.place(relx=0.5, rely=1.0, anchor="s", y=-10)  # Centered at the bottom
 
         # Close Button
-        Button(root, text="CLOSE", command=root.quit).place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+        CTkButton(root, text="CLOSE", command=root.quit,
+                fg_color="red", text_color="white",
+                corner_radius=20, border_width=2, border_color="dark red",
+                hover_color="#ff6666").place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
 
-        self.image_label = Label(root)  
+        self.image_label = CTkLabel(root, text="")  
         self.image_label.pack(pady=10)
+        self.image_label.pack_forget()
 
         # Screenshot Description (Initially Hidden)
-        self.prompt_entry = Text(root, width=50, height=7, wrap="word")
+        self.prompt_entry = CTkTextbox(root, width=600, height=200, wrap="word")
         self.prompt_entry.pack(pady=5)
         self.prompt_entry.insert("1.0", "Here enter the screenshot description")
+        self.prompt_entry.pack(pady=10)
         self.prompt_entry.pack_forget()
 
         # Save and Discard Buttons (Initially Hidden)
-        self.save_button = Button(root, text="SAVE", command=self.save_screenshot, fg="black", bg="lime", font=("Arial", 12, "bold"), relief="raised")
+        self.save_button = CTkButton(root, text="SAVE", command=self.save_screenshot,
+                            fg_color="lime green", text_color="black", 
+                            corner_radius=20, border_width=2, border_color="green",
+                            hover_color="#90ee90")
+        self.save_button.pack(pady=10)
         self.save_button.pack_forget()
 
-        self.discard_button = Button(root, text="DISCARD", command=self.discard_screenshot, fg="black", bg="red", font=("Arial", 12, "bold"), relief="raised")
+        self.discard_button = CTkButton(root, text="DISCARD", command=self.discard_screenshot,
+                                fg_color="red", text_color="white",
+                                corner_radius=20, border_width=2, border_color="dark red",
+                                hover_color="#ff6666")
+        self.discard_button.pack(pady=10)
         self.discard_button.pack_forget()
 
         self.toggle_mode()  # Initialize correct visibility
 
     def toggle_mode(self):
         """Show or hide metadata fields based on selected mode."""
+        self.screenshot_entry.configure(placeholder_text="path/to/screenshot/directory")
         if self.mode_var.get() == "new":
             self.metadata_frame.pack(pady=10)
-            self.doc_entry.delete(0, "end")
-            self.doc_entry.insert(0, "Choose directory for new PDF")
+            self.doc_entry.configure(placeholder_text="path/to/the/new/PDF/file")
         else:
             self.metadata_frame.pack_forget()
-            self.doc_entry.delete(0, "end")
-            self.doc_entry.insert(0, "Choose existing PDF file")
+            self.doc_entry.configure(placeholder_text="path/to/the/existing/PDF/file")
+
 
     def set_screenshot_dir(self):
         """Set the directory where screenshots will be saved."""
@@ -187,7 +206,6 @@ class ScreenshotApp:
     def update_screenshot_dir(self):
         """Update the screenshot directory from manual input."""
         self.screenshot_dir = self.screenshot_entry.get()
-
 
     #add file already exists check if the we are adding a new file
     def update_doc_path(self):
@@ -236,7 +254,7 @@ class ScreenshotApp:
         for widget in self.root.winfo_children():
             widget.pack_forget()
         
-        self.screenshot_label = Label(self.root, text="No new screenshots taken", fg="gray")
+        self.screenshot_label = CTkLabel(self.root, text="No new screenshots taken")
         self.screenshot_label.pack(pady=50)
         self.image_label.pack()
 
@@ -260,7 +278,7 @@ class ScreenshotApp:
         """Display the screenshot in the UI for user approval."""
         self.current_screenshot = image.copy()  # Keep the full-quality image for saving
 
-    # Get the image size
+        # Get the image size
         width, height = image.size
         
         # Define a maximum width and height for the display
@@ -277,21 +295,18 @@ class ScreenshotApp:
             else:  # Portrait or square image
                 new_height = max_height
                 new_width = int(new_height * aspect_ratio)
-            
             resized_image = image.resize((new_width, new_height))
         else:
             resized_image = image
 
-        # Convert the image to a Tkinter-compatible photo image
-        self.screenshot_preview = ImageTk.PhotoImage(resized_image)
-
-        # Update UI
-        self.image_label.config(image=self.screenshot_preview)
-        self.image_label.pack(pady=5)
-        self.screenshot_label.config(text="New screenshot detected!")
-        self.prompt_entry.pack(pady=5)
-        self.save_button.pack(pady=5)
-        self.discard_button.pack(pady=5)
+        # Convert to CTkImage before setting it
+        ctk_image = CTkImage(light_image=resized_image, size=(resized_image.width, resized_image.height))
+        self.image_label.configure(image=ctk_image)
+        self.image_label.image = ctk_image  # Keep a reference!
+        self.image_label.pack()
+        self.prompt_entry.pack()
+        self.save_button.pack()
+        self.discard_button.pack()
 
     def save_screenshot(self):
         """Saves the screenshot and user-provided description to the document."""
@@ -321,11 +336,11 @@ class ScreenshotApp:
 
     def reset_screen(self):
         """Resets the UI back to 'no new screenshots' state."""
-        self.screenshot_label.config(text="No new screenshots taken")
+        self.screenshot_label.configure(text="No new screenshots taken")
         self.prompt_entry.pack_forget()
         self.save_button.pack_forget()
         self.discard_button.pack_forget()
-        self.image_label.config(image="")  # Clear image preview
+        self.image_label.configure(image="")  # Clear image preview
         self.image_label.pack_forget()  # Hide image label
         self.current_screenshot = None
 
@@ -498,6 +513,7 @@ class PdfSaver:
         return 1, "regular"
     
 if __name__ == "__main__":
-    root = Tk()
+    root = CTk()
+    set_default_color_theme("blue")
     app = ScreenshotApp(root)
     root.mainloop()
