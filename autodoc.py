@@ -1,35 +1,38 @@
 import subprocess
 import sys
+import importlib
 
 class AutoInstaller:
-    @staticmethod
-    def install_packages():
-        required_packages = [
-            "Pillow",        # for PIL
-            "reportlab",     # for PDF generation
-            "PyPDF2",         # for working with PDFs
-            "customtkinter"
-        ]
+    REQUIRED_PACKAGES = {
+        "Pillow": "PIL",
+        "reportlab": "reportlab",
+        "PyPDF2": "PyPDF2",
+        "customtkinter": "customtkinter"
+    }
 
-        for package in required_packages:
+    @classmethod
+    def ensure_packages(cls):
+        missing = []
+        for package, import_name in cls.REQUIRED_PACKAGES.items():
             try:
-                __import__(AutoInstaller.get_import_name(package))
+                importlib.import_module(import_name)
             except ImportError:
-                print(f"[INFO] Installing missing package: {package}")
+                print(f"[INFO] Missing package detected: {package}")
+                missing.append(package)
+
+        if missing:
+            print("[INFO] Installing missing packages...")
+            for package in missing:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-    @staticmethod
-    def get_import_name(package_name):
-        # This handles the fact that some packages have different import names
-        mapping = {
-            "Pillow": "PIL",
-            "PyPDF2": "PyPDF2",
-            "reportlab": "reportlab",
-            "customtkinter": "customtkinter"
-        }
-        return mapping.get(package_name, package_name)
+            print("[INFO] Restarting script after installation...")
+            # Restart script
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit()  # Exit the current instance to avoid running twice
 
-AutoInstaller.install_packages()
+# Run the installer
+AutoInstaller.ensure_packages()
+
 
 import os
 from datetime import datetime
@@ -52,7 +55,7 @@ from datetime import datetime
 
 #Note: The pdf file cannot be opened in another program while using autodoc
 
-class ScreenshotApp:
+class ScreenshotApp():
     def __init__(self, root):
         self.root = root
         self.root.title("Auto Screenshot Documenter")
@@ -68,20 +71,29 @@ class ScreenshotApp:
 
         # Mode Selection (Existing file or New file)
         self.mode_var = StringVar(value="new")  # Default: create new file
+        self.use_default_dir = BooleanVar(value=False)
+        self.default_screenshot_dir = os.path.join(os.getcwd(), "img")
+        print(f"Default screenshot directory: {self.default_screenshot_dir}")
 
         CTkLabel(root, text="Choose Mode:").pack(pady=5)
         CTkRadioButton(root, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
         CTkRadioButton(root, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
 
+        CTkCheckBox(root, text="Use default screenshot directory",
+                     variable=self.use_default_dir, onvalue=True, offvalue=False,
+                     command=self.toggle_default_dir).pack()
+
         # UI Elements for path selection
         CTkLabel(root, text="Select Screenshot Directory:").pack(pady=5)
-        self.screenshot_entry = CTkEntry(root, width=400)
+        self.screenshot_entry = CTkEntry(root, width=500)
         self.screenshot_entry.pack(pady=5)
         self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
-        CTkButton(root, text="Browse", command=self.set_screenshot_dir, corner_radius=15).pack()
+        self.screenshot_browse_button = CTkButton(root, text="Browse", command=self.set_screenshot_dir, corner_radius=15)
+        self.screenshot_browse_button.pack()
+
 
         CTkLabel(root, text="Select Document File:").pack(pady=5)
-        self.doc_entry = CTkEntry(root, width=400)
+        self.doc_entry = CTkEntry(root, width=500)
         self.doc_entry.pack(pady=5)
         self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
         CTkButton(root, text="Browse", command=self.browse_doc, corner_radius=15).pack()
@@ -94,26 +106,38 @@ class ScreenshotApp:
         self.fileName_entry = CTkEntry(self.metadata_frame, width=300)
         self.fileName_entry.pack(pady=5)
         self.fileName_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
+        self.fileName_entry.configure(placeholder_text="CVnumber_Surname_ExerciseTitle")
+
+        # Validation for numeric-only entry
+        vcmd = root.register(self.validate_numeric_input)
 
         CTkLabel(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
-        self.exercise_entry = CTkEntry(self.metadata_frame, width=300)
+        self.exercise_entry = CTkEntry(self.metadata_frame, width=150,
+                                       validate="key", 
+                                       validatecommand=(vcmd, '%P'))
         self.exercise_entry.pack(pady=5)
+        self.exercise_entry.configure(placeholder_text="01")
+
 
         CTkLabel(self.metadata_frame, text="Enter Main Title:").pack(pady=5)
         self.title_entry = CTkEntry(self.metadata_frame, width=300)
         self.title_entry.pack(pady=5)
+        self.title_entry.configure(placeholder_text="W2012Srv_IIS")
 
         CTkLabel(self.metadata_frame, text="Enter your name:").pack(pady=5)
         self.name_entry = CTkEntry(self.metadata_frame, width=300)
         self.name_entry.pack(pady=5)
+        self.name_entry.configure(placeholder_text="George")
 
         CTkLabel(self.metadata_frame, text="Enter your surname:").pack(pady=5)
         self.surname_entry = CTkEntry(self.metadata_frame, width=300)
         self.surname_entry.pack(pady=5)
+        self.surname_entry.configure(placeholder_text="Orwell")
 
         CTkLabel(self.metadata_frame, text="Enter your Class:").pack(pady=5)
         self.class_entry = CTkEntry(self.metadata_frame, width=300)
         self.class_entry.pack(pady=5)
+        self.class_entry.configure(placeholder_text="C3a")
         
         self.prompt_mode_var = StringVar(value="regular")
 
@@ -162,6 +186,13 @@ class ScreenshotApp:
 
         self.toggle_mode()  # Initialize correct visibility
 
+
+    def validate_numeric_input(self, value):
+        return value.isdigit() or value == ""
+
+    def validate_numeric(self, value):
+        return value.isdigit() or value == ""
+
     def toggle_mode(self):
         """Show or hide metadata fields based on selected mode."""
         self.screenshot_entry.configure(placeholder_text="path/to/screenshot/directory")
@@ -171,6 +202,20 @@ class ScreenshotApp:
         else:
             self.metadata_frame.pack_forget()
             self.doc_entry.configure(placeholder_text="path/to/the/existing/PDF/file")
+
+    def toggle_default_dir(self):
+        if self.use_default_dir.get():
+            self.screenshot_entry.delete(0, "end")
+            self.screenshot_dir = self.default_screenshot_dir  # <-- make sure this is set
+            self.screenshot_entry.insert(0, self.default_screenshot_dir)
+            self.screenshot_entry.configure(state="disabled")
+            self.screenshot_browse_button.configure(state="disabled")
+        else:
+            self.screenshot_entry.configure(state="normal")
+            self.screenshot_entry.delete(0, "end")
+            self.screenshot_entry.configure(placeholder_text="path/to/screenshot/directory")
+            self.screenshot_browse_button.configure(state="normal")
+            self.toggle_mode()
 
 
     def set_screenshot_dir(self):
@@ -205,7 +250,10 @@ class ScreenshotApp:
 
     def update_screenshot_dir(self):
         """Update the screenshot directory from manual input."""
-        self.screenshot_dir = self.screenshot_entry.get()
+        if self.use_default_dir.get():
+            self.screenshot_dir = self.default_screenshot_dir
+        else:
+            self.screenshot_dir = self.screenshot_entry.get()
 
     #add file already exists check if the we are adding a new file
     def update_doc_path(self):
