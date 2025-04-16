@@ -198,7 +198,14 @@ class ScreenshotApp():
 
     def validate_numeric_input(self, value):
         return value.isdigit() or value == ""
+    
+    def raise_above_all(self):
+        if self.root.state() == 'iconic':
+            self.root.deiconify()  # Restore if minimized
 
+        self.root.lift()
+        self.root.attributes('-topmost', 1)
+        self.root.attributes('-topmost', 0)
 
     def toggle_mode(self):
         """Show or hide metadata fields based on selected mode."""
@@ -349,6 +356,7 @@ class ScreenshotApp():
 
     def display_screenshot(self, image):
         """Display the screenshot in the UI for user approval."""
+        self.raise_above_all()
         self.current_screenshot = image.copy()  # Keep the full-quality image for saving
 
         # Get the image size
