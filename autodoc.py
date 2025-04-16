@@ -38,7 +38,7 @@ import os
 from datetime import datetime
 from PIL import ImageGrab, ImageTk
 from customtkinter import*
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, PhotoImage
 import json
 import hashlib
 from reportlab.pdfgen import canvas 
@@ -59,6 +59,8 @@ from datetime import datetime
 class ScreenshotApp():
     def __init__(self, root):
         self.root = root
+        self.assets_path = os.path.join(os.getcwd(), "assets")
+        self.root.iconbitmap(os.path.join(self.assets_path, "icon.ico"))
         self.root.title("Auto Screenshot Documenter")
         self.root.geometry("1024x950")
 
@@ -175,10 +177,8 @@ class ScreenshotApp():
         # Settings
         self.is_settings_menu_visible = False
 
-        assets_path = os.path.join(os.getcwd(), "assets")
-
-        dark_icon_path = os.path.join(assets_path, "settingsImageBlack.png")
-        light_icon_path = os.path.join(assets_path, "settingsImageGrey.png")
+        dark_icon_path = os.path.join(self.assets_path, "settingsImageBlack.png")
+        light_icon_path = os.path.join(self.assets_path, "settingsImageGrey.png")
         self.auto_popUp = BooleanVar(value=True)
         self.auto_minimalize = BooleanVar(value=False)
 
@@ -230,6 +230,10 @@ class ScreenshotApp():
         self.discard_button.pack_forget()
 
         self.toggle_mode()  # Initialize correct visibility
+
+    ## -------------------
+    ## -----SETTINGS------
+    ## -------------------
 
     def initialize_theme(self):
         """Initialize theme based on system settings."""
@@ -343,6 +347,9 @@ class ScreenshotApp():
             self.class_entry.delete(0, "end")
             self.class_entry.configure(placeholder_text="C3a")
 
+    ## -------------------
+    ## -----MAIN-CODE-----
+    ## -------------------
 
     def set_screenshot_dir(self):
         """Set the directory where screenshots will be saved."""
