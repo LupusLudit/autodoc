@@ -54,6 +54,7 @@ from datetime import datetime
 #pip install reportlab
 
 #Note: The pdf file cannot be opened in another program while using autodoc
+#TODO: Clean the code, change main icon
 
 class ScreenshotApp():
     def __init__(self, root):
@@ -171,6 +172,41 @@ class ScreenshotApp():
         self.image_label.pack(pady=10)
         self.image_label.pack_forget()
 
+        # Settings
+        self.is_settings_menu_visible = False
+
+        assets_path = os.path.join(os.getcwd(), "assets")
+
+        dark_icon_path = os.path.join(assets_path, "settingsImageBlack.png")
+        light_icon_path = os.path.join(assets_path, "settingsImageGrey.png")
+        self.auto_popUp = BooleanVar(value=True)
+        self.auto_minimalize = BooleanVar(value=False)
+
+        self.settings_icon_light = CTkImage(light_image=Image.open(dark_icon_path), size=(25, 25))
+        self.settings_icon_dark = CTkImage(light_image=Image.open(light_icon_path), size=(25, 25))
+
+        self.settings_frame = CTkFrame(root, width=40, height=40, fg_color="transparent")
+        self.settings_frame.place(relx=1.0, rely=0.0, anchor="ne", x=-10, y=10)
+
+        self.settings_button = CTkButton(self.settings_frame, image=self.get_correct_settings_icon(),
+                                        text="", width=30, height=30,
+                                        command=self.toggle_settings_menu, fg_color="transparent", hover=False)
+        self.settings_button.pack()
+
+        self.settings_menu = CTkFrame(root, width=200, height=0)
+        self.settings_menu.place(relx=1.0, rely=0.0, anchor="ne", x=-10, y=60)
+        self.settings_menu.grid_propagate(False)  # Prevent auto resizing
+
+        self.theme_switch = CTkSwitch(self.settings_menu, text="Dark Mode", command=self.toggle_theme)
+        self.theme_switch.grid(row=0, column=0, pady=10, padx=10, sticky="w")
+        self.auto_popUp_checkbox = CTkCheckBox(self.settings_menu, text="Auto pop up",
+                    variable=self.auto_popUp, onvalue=True, offvalue=False,)
+        self.auto_popUp_checkbox.grid(row=1, column=0, pady=10, padx=10, sticky="w")
+        self.auto_minimalize_checkbox = CTkCheckBox(self.settings_menu, text="Auto minimalize",
+                    variable=self.auto_minimalize, onvalue=True, offvalue=False,)
+        self.auto_minimalize_checkbox.grid(row=2, column=0, pady=10, padx=10, sticky="w")
+        self.initialize_theme()
+
         # Screenshot Description (Initially Hidden)
         self.prompt_entry = CTkTextbox(root, width=600, height=200, wrap="word")
         self.prompt_entry.pack(pady=5)
@@ -195,17 +231,81 @@ class ScreenshotApp():
 
         self.toggle_mode()  # Initialize correct visibility
 
+    def initialize_theme(self):
+        """Initialize theme based on system settings."""
+        mode = "Dark"
+        set_appearance_mode(mode)
+        self.theme_switch.select() if mode == "Dark" else self.theme_switch.deselect()
+        self.settings_button.configure(image=self.get_correct_settings_icon())
+
+
+    def get_correct_settings_icon(self):
+        """Return the correct settings icon based on system settings."""
+        if get_appearance_mode() == "Dark":
+            return self.settings_icon_dark
+        else:
+            return self.settings_icon_light
+
+    def toggle_theme(self):
+        """Toggle between dark and light mode."""
+        if get_appearance_mode() == "Dark":
+            set_appearance_mode("Light")
+        else:
+            set_appearance_mode("Dark")
+        
+        self.settings_button.configure(image=self.get_correct_settings_icon())
+
+    def toggle_settings_menu(self):
+        """Show/hide the settings dropdown with animation."""
+        if self.is_settings_menu_visible:
+            self.animate_settings_menu(opening=False)
+        else:
+            self.settings_menu.place(relx=1.0, rely=0.0, anchor="ne", x=-10, y=60)
+            self.animate_settings_menu(opening=True)
+        
+        self.is_settings_menu_visible = not self.is_settings_menu_visible
+
+    def animate_settings_menu(self, opening=True):
+        """Animate the settings dropdown menu."""
+        max_height = 150
+        step = 10
+        current_height = self.settings_menu.winfo_height()
+
+        def expand():
+            nonlocal current_height
+            if current_height < max_height:
+                current_height += step
+                self.settings_menu.configure(height=current_height)
+                self.root.after(10, expand)
+
+        def collapse():
+            nonlocal current_height
+            if current_height > 0:
+                current_height -= step
+                self.settings_menu.configure(height=current_height)
+                self.root.after(10, collapse)
+            else:
+                self.settings_menu.place_forget()
+
+        expand() if opening else collapse()
 
     def validate_numeric_input(self, value):
+        """Make sure the the input is numeric or empty."""
         return value.isdigit() or value == ""
     
     def raise_above_all(self):
+        """Raise the window above all other windows."""
         if self.root.state() == 'iconic':
-            self.root.deiconify()  # Restore if minimized
+            self.root.deiconify()
 
         self.root.lift()
         self.root.attributes('-topmost', 1)
         self.root.attributes('-topmost', 0)
+
+    def minimalize(self):
+        """Minimize the window."""
+        self.root.iconify()
+
 
     def toggle_mode(self):
         """Show or hide metadata fields based on selected mode."""
@@ -356,7 +456,8 @@ class ScreenshotApp():
 
     def display_screenshot(self, image):
         """Display the screenshot in the UI for user approval."""
-        self.raise_above_all()
+        if self.auto_popUp.get():
+            self.raise_above_all()
         self.current_screenshot = image.copy()  # Keep the full-quality image for saving
 
         # Get the image size
@@ -409,11 +510,17 @@ class ScreenshotApp():
         except Exception as e:
             messagebox.showerror("Error", f"Could not save screenshot: {e}")
 
+        if self.auto_minimalize.get():
+            self.minimalize()
+
     def discard_screenshot(self):
         """Discards the current screenshot."""
         self.current_screenshot = None
         messagebox.showinfo("Discarded", "Screenshot discarded.")
         self.reset_screen()
+
+        if self.auto_minimalize.get():
+            self.minimalize()
 
     def reset_screen(self):
         """Resets the UI back to 'no new screenshots' state."""
@@ -596,5 +703,6 @@ class PdfSaver:
 if __name__ == "__main__":
     root = CTk()
     set_default_color_theme("blue")
+    set_appearance_mode("Dark") 
     app = ScreenshotApp(root)
     root.mainloop()
