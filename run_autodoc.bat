@@ -1,3 +1,3 @@
 cd /d "%~dp0"
-python autodoc.py
+python src/autodoc.py
 pause

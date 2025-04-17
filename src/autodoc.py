@@ -36,9 +36,9 @@ AutoInstaller.ensure_packages()
 
 import os
 from datetime import datetime
-from PIL import ImageGrab, ImageTk
+from PIL import ImageGrab
 from customtkinter import*
-from tkinter import filedialog, messagebox, PhotoImage
+from tkinter import filedialog, messagebox
 import json
 import hashlib
 from reportlab.pdfgen import canvas 
@@ -54,12 +54,14 @@ from datetime import datetime
 #pip install reportlab
 
 #Note: The pdf file cannot be opened in another program while using autodoc
+#Note 2: Run the code via the bat file, otherwise there might be problem with some of the filepaths
 #TODO: Clean the code, change main icon
 
 class ScreenshotApp():
     def __init__(self, root):
         self.root = root
         self.assets_path = os.path.join(os.getcwd(), "assets")
+        self.include_path = os.path.join(os.getcwd(), "include")
         self.root.iconbitmap(os.path.join(self.assets_path, "icon.ico"))
         self.root.title("Auto Screenshot Documenter")
         self.root.geometry("1024x950")
@@ -558,7 +560,8 @@ class PdfSaver:
         self.image_margin = 10
         self.image_width = self.width - self.image_margin * 2
         self.image_height = self.segment_height - self.description_height - self.image_margin * 2
-        self.temporary_addition_path = os.path.join(os.path.dirname(__file__), "temp_add.pdf")
+        self.include_path = os.path.join(os.getcwd(), "include")
+        self.temporary_addition_path = os.path.join(self.include_path, "temp_add.pdf")
 
         self.register_fonts()
 
@@ -673,7 +676,7 @@ class PdfSaver:
         return hashlib.md5(os.path.abspath(filename).encode()).hexdigest()
 
     def save_count(self):
-        count_file = "count.json"
+        count_file = os.path.join(self.include_path, "count.json")
         file_key = self.get_file_key(self.filename)
 
         if os.path.exists(count_file):
@@ -694,7 +697,7 @@ class PdfSaver:
             json.dump(count_data, file, indent=4)
 
     def load_count(self):
-        count_file = "count.json"
+        count_file = os.path.join(self.include_path, "count.json")
         file_key = self.get_file_key(self.filename)
         if os.path.exists(count_file):
             with open(count_file, "r") as file:

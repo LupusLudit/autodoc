@@ -1,0 +1,34 @@
+import subprocess
+import sys
+import importlib
+
+class AutoInstaller:
+    REQUIRED_PACKAGES = {
+        "Pillow": "PIL",
+        "reportlab": "reportlab",
+        "PyPDF2": "PyPDF2",
+        "customtkinter": "customtkinter"
+    }
+
+    @classmethod
+    def ensure_packages(cls):
+        missing = []
+        for package, import_name in cls.REQUIRED_PACKAGES.items():
+            try:
+                importlib.import_module(import_name)
+            except ImportError:
+                print(f"[INFO] Missing package detected: {package}")
+                missing.append(package)
+
+        if missing:
+            print("[INFO] Installing missing packages...")
+            for package in missing:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+            print("[INFO] Restarting script after installation...")
+            # Restart script
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit()  # Exit the current instance to avoid running twice
+
+# Run the installer
+AutoInstaller.ensure_packages()
