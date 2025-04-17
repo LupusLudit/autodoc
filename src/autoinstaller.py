@@ -2,6 +2,12 @@ import subprocess
 import sys
 import importlib
 
+# If AutoInstaller does not work, run these commands in cmd:
+# pip install Pillow
+# pip install PyPDF2
+# pip install reportlab
+# pip install customtkinter
+
 class AutoInstaller:
     REQUIRED_PACKAGES = {
         "Pillow": "PIL",
@@ -29,6 +35,3 @@ class AutoInstaller:
             # Restart script
             subprocess.Popen([sys.executable] + sys.argv)
             sys.exit()  # Exit the current instance to avoid running twice
-
-# Run the installer
-AutoInstaller.ensure_packages()
