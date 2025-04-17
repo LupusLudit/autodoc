@@ -11,12 +11,12 @@ You need to have python installed on your computer.
 Recomended python version: 3.13.1 or newer:
 [python download](https://www.python.org/downloads/)
 The program also features a autoinstaller that should automaticly install are reqiered packages. In case something goes wrong, run these commands:
-`
+```
 pip install Pillow
 pip install PyPDF2
 pip install reportlab
 pip install customtkinter
-`
+```
 That should install all necessary packages.
 
 ## Running the program
