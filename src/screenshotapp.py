@@ -16,7 +16,31 @@ class ScreenshotApp():
         self.root.iconbitmap(os.path.join(self.assets_path, "icon.ico"))
         self.root.title("Auto Screenshot Documenter")
         self.root.geometry("1024x950")
-        self.settings_menu = SettingsMenu(root, self.assets_path)
+
+        #==Cavas and a scrollable frame==
+
+        self.canvas = CTkCanvas(root, borderwidth=0, highlightthickness=0)
+        self.scrollbar = CTkScrollbar(root, orientation="vertical", command=self.canvas.yview)
+        self.scrollable_frame = CTkFrame(self.canvas, corner_radius=0)
+        self.settings_menu = SettingsMenu(self.scrollable_frame, self.assets_path)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+        # Placing the frame inside the canvas at coordinate (0,0).
+        self.scrollable_frame_id = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        # Connecting Canvas and Scrollbar
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        # Adjusting the Frame Size on Canvas Resize
+        self.canvas.bind("<Configure>", self.adjust_scrollable_frame)
 
         # Variables for paths
         self.screenshot_dir = None
@@ -27,39 +51,37 @@ class ScreenshotApp():
         self.previous_image = None
         self.doc = None
 
-        # Mode Selection (Existing file or New file)
-        self.mode_var = StringVar(value="new")  # Default: create new file
+        self.mode_var = StringVar(value="new")
         self.use_default_dir = BooleanVar(value=False)
         self.use_default_class = BooleanVar(value=False)
 
         self.default_screenshot_dir = os.path.join(os.getcwd(), "img")
         self.default_class = "C3a"
 
-        CTkLabel(root, text="Choose Mode:").pack(pady=5)
-        CTkRadioButton(root, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
-        CTkRadioButton(root, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
+        #==UI Elements==
 
-        CTkCheckBox(root, text="Use default screenshot directory",
+        CTkLabel(self.scrollable_frame, text="Choose Mode:").pack(pady=5)
+        CTkRadioButton(self.scrollable_frame, text="Create New PDF", variable=self.mode_var, value="new", command=self.toggle_mode).pack()
+        CTkRadioButton(self.scrollable_frame, text="Open Existing PDF", variable=self.mode_var, value="existing", command=self.toggle_mode).pack()
+
+        CTkCheckBox(self.scrollable_frame, text="Use default screenshot directory",
                      variable=self.use_default_dir, onvalue=True, offvalue=False,
                      command=self.toggle_default_dir).pack()
 
-        # UI Elements for path selection
-        CTkLabel(root, text="Select Screenshot Directory:").pack(pady=5)
-        self.screenshot_entry = CTkEntry(root, width=500)
+        CTkLabel(self.scrollable_frame, text="Select Screenshot Directory:").pack(pady=5)
+        self.screenshot_entry = CTkEntry(self.scrollable_frame, width=500)
         self.screenshot_entry.pack(pady=5)
         self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
-        self.screenshot_browse_button = CTkButton(root, text="Browse", command=self.set_screenshot_dir, corner_radius=15)
+        self.screenshot_browse_button = CTkButton(self.scrollable_frame, text="Browse", command=self.set_screenshot_dir, corner_radius=15)
         self.screenshot_browse_button.pack()
 
-
-        CTkLabel(root, text="Select Document File:").pack(pady=5)
-        self.doc_entry = CTkEntry(root, width=500)
+        CTkLabel(self.scrollable_frame, text="Select Document File:").pack(pady=5)
+        self.doc_entry = CTkEntry(self.scrollable_frame, width=500)
         self.doc_entry.pack(pady=5)
         self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
-        CTkButton(root, text="Browse", command=self.browse_doc, corner_radius=15).pack()
+        CTkButton(self.scrollable_frame, text="Browse", command=self.browse_doc, corner_radius=15).pack(pady=10)
 
-        # Metadata fields (Only shown for new PDFs)
-        self.metadata_frame = CTkFrame(root)
+        self.metadata_frame = CTkFrame(self.scrollable_frame)
         self.metadata_frame.pack(pady=10)
 
         CTkLabel(self.metadata_frame, text="Enter new file name:").pack(pady=5)
@@ -68,16 +90,12 @@ class ScreenshotApp():
         self.fileName_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
         self.fileName_entry.configure(placeholder_text="CVnumber_Surname_ExerciseTitle")
 
-        # Validation for numeric-only entry
         vcmd = root.register(self.validate_numeric_input)
 
         CTkLabel(self.metadata_frame, text="Enter Exercise number:").pack(pady=5)
-        self.exercise_entry = CTkEntry(self.metadata_frame, width=150,
-                                       validate="key", 
-                                       validatecommand=(vcmd, '%P'))
+        self.exercise_entry = CTkEntry(self.metadata_frame, width=150, validate="key", validatecommand=(vcmd, '%P'))
         self.exercise_entry.pack(pady=5)
         self.exercise_entry.configure(placeholder_text="01")
-
 
         CTkLabel(self.metadata_frame, text="Enter Main Title:").pack(pady=5)
         self.title_entry = CTkEntry(self.metadata_frame, width=300)
@@ -94,14 +112,14 @@ class ScreenshotApp():
         self.surname_entry.pack(pady=5)
         self.surname_entry.configure(placeholder_text="Orwell")
 
-        CTkCheckBox(self.metadata_frame, text="Use default class",
+        CTkCheckBox(self.metadata_frame, text="Use default class name",
                     variable=self.use_default_class, onvalue=True, offvalue=False,
                     command=self.toggle_default_class).pack()
 
-        CTkLabel(self.metadata_frame, text="Enter your Class:").pack(pady=5)
+        CTkLabel(self.metadata_frame, text="Enter your class name (school class):").pack(pady=5)
         self.class_entry = CTkEntry(self.metadata_frame, width=300)
-        self.class_entry.bind("<KeyRelease>", lambda e: self.update_class())
         self.class_entry.pack(pady=5)
+        self.class_entry.bind("<KeyRelease>", lambda e: self.update_class())
         self.class_entry.configure(placeholder_text="C3a")
         
         self.prompt_mode_var = StringVar(value="regular")
@@ -111,45 +129,77 @@ class ScreenshotApp():
         CTkRadioButton(self.metadata_frame, text="Automatic prompt numbering", variable=self.prompt_mode_var, value="numbered").pack()
 
         # OK Button
-        self.ok_button = CTkButton(root, text="OK", command=self.start_monitoring,
+        self.ok_button = CTkButton(self.scrollable_frame, text="OK", command=self.start_monitoring,
                                 fg_color="lime green", text_color="black", 
                                 corner_radius=20, border_width=2, border_color="green",
                                 hover_color="#90ee90")
-        self.ok_button.place(relx=0.5, rely=1.0, anchor="s", y=-10)  # Centered at the bottom
+        self.ok_button.pack(pady=20)
 
         # Close Button
-        CTkButton(root, text="CLOSE", command=root.quit,
+        self.close_button = CTkButton(self.scrollable_frame, text="CLOSE", command=root.quit,
                 fg_color="red", text_color="white",
                 corner_radius=20, border_width=2, border_color="dark red",
-                hover_color="#ff6666").place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+                hover_color="#ff6666")
+        self.close_button.pack(pady=20)
 
-        self.image_label = CTkLabel(root, text="")  
-        self.image_label.pack(pady=10)
+        #==Initially hidden elements==
+
+        self.image_label = CTkLabel(root, text="")
         self.image_label.pack_forget()
 
-        # Screenshot Description (Initially Hidden)
         self.prompt_entry = CTkTextbox(root, width=600, height=200, wrap="word")
-        self.prompt_entry.pack(pady=5)
         self.prompt_entry.insert("1.0", "Here enter the screenshot description")
-        self.prompt_entry.pack(pady=10)
         self.prompt_entry.pack_forget()
 
-        # Save and Discard Buttons (Initially Hidden)
         self.save_button = CTkButton(root, text="SAVE", command=self.save_screenshot,
                             fg_color="lime green", text_color="black", 
                             corner_radius=20, border_width=2, border_color="green",
                             hover_color="#90ee90")
-        self.save_button.pack(pady=10)
         self.save_button.pack_forget()
 
         self.discard_button = CTkButton(root, text="DISCARD", command=self.discard_screenshot,
                                 fg_color="red", text_color="white",
                                 corner_radius=20, border_width=2, border_color="dark red",
                                 hover_color="#ff6666")
-        self.discard_button.pack(pady=10)
         self.discard_button.pack_forget()
 
-        self.toggle_mode()  # Initialize correct visibility
+        self.save_hint_label = CTkLabel(root, text="Press 'Ctrl + S' to save the screenshot")
+        self.save_hint_label.pack_forget()
+
+        self.discard_hint_label = CTkLabel(root, text="Press 'Ctrl + Del' to discard the screenshot")
+        self.discard_hint_label.pack_forget()
+
+        root.bind("<Control-s>", self.save_screenshot)
+        root.bind("<Control-Delete>", self.discard_screenshot)
+        self.toggle_mode()
+
+    def _on_mousewheel(self, event):
+        """Scrolls the canvas when the mouse wheel is used."""
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    def adjust_scrollable_frame(self, event):
+        """Adjusts the size of the scrollable frame to match the canvas size."""
+        # Make sure the frame inside always matches the canvas width
+        canvas_width = event.width
+        canvas_height = event.height
+        self.canvas.itemconfig(self.scrollable_frame_id, width=canvas_width)
+
+        # Ensure the scrollable_frame has at least the same height as the canvas
+        self.scrollable_frame.update_idletasks() 
+        frame_height = self.scrollable_frame.winfo_height()
+
+        # If the frame is shorter than the window, stretch it to at least match the canvas height
+        if frame_height < canvas_height:
+            self.canvas.itemconfig(self.scrollable_frame_id, height=canvas_height)
+        else:
+            self.canvas.itemconfig(self.scrollable_frame_id, height=frame_height)
+
+        self.update_scrollregion()
+
+
+    def update_scrollregion(self):
+        """Sets the scroll area to the bounding box that contains all items in the canvas."""
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     ## ====================
     ## ==USER PREFERENCES==
@@ -173,11 +223,16 @@ class ScreenshotApp():
         """Show or hide metadata fields based on selected mode."""
         self.screenshot_entry.configure(placeholder_text="path/to/screenshot/directory")
         if self.mode_var.get() == "new":
+            self.ok_button.pack_forget()
+            self.close_button.pack_forget()
             self.metadata_frame.pack(pady=10)
+            self.ok_button.pack(pady=20)
+            self.close_button.pack(pady=10)
             self.doc_entry.configure(placeholder_text="path/to/the/new/PDF/file")
         else:
             self.metadata_frame.pack_forget()
             self.doc_entry.configure(placeholder_text="path/to/the/existing/PDF/file")
+
 
     def toggle_default_dir(self):
         """Toggle default directory selection."""
@@ -358,8 +413,10 @@ class ScreenshotApp():
         self.prompt_entry.pack(pady=5)
         self.save_button.pack(pady=8)
         self.discard_button.pack(pady=8)
+        self.save_hint_label.pack(pady=5)
+        self.discard_hint_label.pack(pady=5)
 
-    def save_screenshot(self):
+    def save_screenshot(self, event=None):
         """Saves the screenshot and user-provided description to the document."""
         if self.current_screenshot is None:
             return
@@ -382,7 +439,7 @@ class ScreenshotApp():
         if self.settings_menu.auto_minimalize.get():
             self.minimalize()
 
-    def discard_screenshot(self):
+    def discard_screenshot(self, event=None):
         """Discards the current screenshot."""
         self.current_screenshot = None
         messagebox.showinfo("Discarded", "Screenshot discarded.")
@@ -397,6 +454,8 @@ class ScreenshotApp():
         self.prompt_entry.pack_forget()
         self.save_button.pack_forget()
         self.discard_button.pack_forget()
+        self.save_hint_label.pack_forget()
+        self.discard_hint_label.pack_forget()
         self.image_label.configure(image="")  # Clear image preview
         self.image_label.pack_forget()  # Hide image label
         self.current_screenshot = None

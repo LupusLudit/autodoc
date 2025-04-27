@@ -64,6 +64,7 @@ class SettingsMenu:
             self.animate(opening=False)
         else:
             self.settings_menu.place(relx=1.0, rely=0.0, anchor="ne", x=-10, y=60)
+            self.settings_menu.lift()
             self.animate(opening=True)
 
     def animate(self, opening):
