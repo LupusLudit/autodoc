@@ -11,6 +11,7 @@ class SettingsMenu:
         # Variables
         self.auto_popUp = BooleanVar(value=True)
         self.auto_minimalize = BooleanVar(value=False)
+        self.auto_alert = BooleanVar(value=False)
 
         # Icon
         dark_icon_path = os.path.join(self.assets_path, "settingsImageBlack.png")
@@ -44,6 +45,10 @@ class SettingsMenu:
                                                     variable=self.auto_minimalize)
         self.auto_minimalize_checkbox.grid(row=2, column=0, pady=10, padx=10, sticky="w")
 
+        self.auto_alert_checkbox = CTkCheckBox(self.settings_menu, text="Automatic alerts",
+                                                    variable=self.auto_alert)
+        self.auto_alert_checkbox.grid(row=3, column=0, pady=10, padx=10, sticky="w")
+
         self.initialize_theme()
 
     def get_icon(self):
@@ -69,7 +74,7 @@ class SettingsMenu:
 
     def animate(self, opening):
         """Animate window closing/opening."""
-        target_height = 150 if opening else 0
+        target_height = 200 if opening else 0
         step = 5 if opening else -5
         current_height = self.settings_menu.winfo_height()
 

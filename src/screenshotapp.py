@@ -52,8 +52,8 @@ class ScreenshotApp():
         self.doc = None
 
         self.mode_var = StringVar(value="new")
-        self.use_default_dir = BooleanVar(value=False)
-        self.use_default_class = BooleanVar(value=False)
+        self.use_default_dir = BooleanVar(value=True)
+        self.use_default_class = BooleanVar(value=True)
 
         self.default_screenshot_dir = os.path.join(os.getcwd(), "img")
         self.default_class = "C3a"
@@ -68,14 +68,16 @@ class ScreenshotApp():
                      variable=self.use_default_dir, onvalue=True, offvalue=False,
                      command=self.toggle_default_dir).pack()
 
-        CTkLabel(self.scrollable_frame, text="Select Screenshot Directory:").pack(pady=5)
+        CTkLabel(self.scrollable_frame, text="Path To The Screenshot Directory:").pack(pady=5)
         self.screenshot_entry = CTkEntry(self.scrollable_frame, width=500)
         self.screenshot_entry.pack(pady=5)
         self.screenshot_entry.bind("<KeyRelease>", lambda e: self.update_screenshot_dir())
         self.screenshot_browse_button = CTkButton(self.scrollable_frame, text="Browse", command=self.set_screenshot_dir, corner_radius=15)
         self.screenshot_browse_button.pack()
 
-        CTkLabel(self.scrollable_frame, text="Select Document File:").pack(pady=5)
+        self.directory_label = CTkLabel(self.scrollable_frame, text="Path To The PDF File Directory:")
+        self.directory_label.pack(pady=5)
+
         self.doc_entry = CTkEntry(self.scrollable_frame, width=500)
         self.doc_entry.pack(pady=5)
         self.doc_entry.bind("<KeyRelease>", lambda e: self.update_doc_path())
@@ -147,8 +149,9 @@ class ScreenshotApp():
         self.image_label = CTkLabel(root, text="")
         self.image_label.pack_forget()
 
+        self.prompt_label = CTkLabel(root, text="Here enter the screenshot description:")
+        self.prompt_label.pack_forget()       
         self.prompt_entry = CTkTextbox(root, width=600, height=200, wrap="word")
-        self.prompt_entry.insert("1.0", "Here enter the screenshot description")
         self.prompt_entry.pack_forget()
 
         self.save_button = CTkButton(root, text="SAVE", command=self.save_screenshot,
@@ -171,7 +174,11 @@ class ScreenshotApp():
 
         root.bind("<Control-s>", self.save_screenshot)
         root.bind("<Control-Delete>", self.discard_screenshot)
+
+        # Set default values...
         self.toggle_mode()
+        self.toggle_default_dir()
+        self.toggle_default_class()
 
     def _on_mousewheel(self, event):
         """Scrolls the canvas when the mouse wheel is used."""
@@ -228,10 +235,12 @@ class ScreenshotApp():
             self.metadata_frame.pack(pady=10)
             self.ok_button.pack(pady=20)
             self.close_button.pack(pady=10)
-            self.doc_entry.configure(placeholder_text="path/to/the/new/PDF/file")
+            self.doc_entry.configure(placeholder_text="path/to/the/PDF/file/directory")
+            self.directory_label.configure(text="Path To The PDF File Directory:")
         else:
             self.metadata_frame.pack_forget()
             self.doc_entry.configure(placeholder_text="path/to/the/existing/PDF/file")
+            self.directory_label.configure(text="Path To The Existing PDF File:")
 
 
     def toggle_default_dir(self):
@@ -361,6 +370,7 @@ class ScreenshotApp():
         self.screenshot_label = CTkLabel(self.root, text="No new screenshots taken")
         self.screenshot_label.pack(pady=50)
         self.image_label.pack()
+        self.settings_menu = SettingsMenu(self.root, self.assets_path)
 
         # Start checking clipboard
         self.check_clipboard()
@@ -410,6 +420,7 @@ class ScreenshotApp():
         self.image_label.configure(image=ctk_image)
         self.image_label.image = ctk_image  # Keep a reference!
         self.image_label.pack(pady=5)
+        self.prompt_label.pack(pady=5)
         self.prompt_entry.pack(pady=5)
         self.save_button.pack(pady=8)
         self.discard_button.pack(pady=8)
@@ -423,15 +434,16 @@ class ScreenshotApp():
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = os.path.join(self.screenshot_dir, f"screenshot_{timestamp}.png")
-        description = self.prompt_entry.get("1.0", "end-1c").strip() or "Here enter the screenshot description"
+        description = self.prompt_entry.get("1.0", "end-1c").strip()
+        self.prompt_entry.delete("1.0", "end")
 
         try:
             # Save the screenshot as a PNG
             self.current_screenshot.save(filename, "PNG")
             self.doc.addImage(filename, description)
             print(f"Screenshot saved: {filename}")
-            messagebox.showinfo("Success", "Screenshot saved to document!")
-
+            if self.settings_menu.auto_alert.get():
+                messagebox.showinfo("Success", "Screenshot saved to document!")
             self.reset_screen()
         except Exception as e:
             messagebox.showerror("Error", f"Could not save screenshot: {e}")
@@ -442,8 +454,11 @@ class ScreenshotApp():
     def discard_screenshot(self, event=None):
         """Discards the current screenshot."""
         self.current_screenshot = None
-        messagebox.showinfo("Discarded", "Screenshot discarded.")
         self.reset_screen()
+        self.prompt_entry.delete("1.0", "end")
+
+        if self.settings_menu.auto_alert.get():
+            messagebox.showinfo("Discarded", "Screenshot discarded.")
 
         if self.settings_menu.auto_minimalize.get():
             self.minimalize()
@@ -451,6 +466,7 @@ class ScreenshotApp():
     def reset_screen(self):
         """Resets the UI back to 'no new screenshots' state."""
         self.screenshot_label.configure(text="No new screenshots taken")
+        self.prompt_label.pack_forget()
         self.prompt_entry.pack_forget()
         self.save_button.pack_forget()
         self.discard_button.pack_forget()
