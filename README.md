@@ -2,9 +2,11 @@
 Written in python. This program automaticly detects screenshots from your clipboard and copies them into a pdf file.
 You can add a description for each screenshot, this text would later be displayed in the pdf file with the said screenshot.
 The program features some basic user settings:
+
 * Dark mode / light mode theme selection
 * Automatic window pop up => makes the window "pop up" if it was minimalized and puts it into foreground right after creating a screenshot
 * Automatic window minimalization => minimalizes the window after the user saved/discarded a screenshot
+* Automatic alerts => after saving or discarding a screenshot an alert will show up (or not show up depending on users settings) telling the user if the operation was successful.
 
 ## Requirements
 You need to have python installed on your computer.
