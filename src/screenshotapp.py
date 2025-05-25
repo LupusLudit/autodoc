@@ -50,6 +50,7 @@ class ScreenshotApp():
         self.screenshot_preview = None
         self.previous_image = None
         self.doc = None
+        self.monitoring_started = False
 
         self.mode_var = StringVar(value="new")
         self.use_default_dir = BooleanVar(value=True)
@@ -146,34 +147,35 @@ class ScreenshotApp():
 
         #==Initially hidden elements==
 
-        self.image_label = CTkLabel(root, text="")
+        self.image_label = CTkLabel(self.scrollable_frame, text="")
         self.image_label.pack_forget()
 
-        self.prompt_label = CTkLabel(root, text="Here enter the screenshot description:")
+        self.prompt_label = CTkLabel(self.scrollable_frame, text="Here enter the screenshot description:")
         self.prompt_label.pack_forget()       
-        self.prompt_entry = CTkTextbox(root, width=600, height=200, wrap="word")
+        self.prompt_entry = CTkTextbox(self.scrollable_frame, width=600, height=200, wrap="word")
         self.prompt_entry.pack_forget()
 
-        self.save_button = CTkButton(root, text="SAVE", command=self.save_screenshot,
+        self.save_button = CTkButton(self.scrollable_frame, text="SAVE", command=self.save_screenshot,
                             fg_color="lime green", text_color="black", 
                             corner_radius=20, border_width=2, border_color="green",
                             hover_color="#90ee90")
         self.save_button.pack_forget()
 
-        self.discard_button = CTkButton(root, text="DISCARD", command=self.discard_screenshot,
+        self.discard_button = CTkButton(self.scrollable_frame, text="DISCARD", command=self.discard_screenshot,
                                 fg_color="red", text_color="white",
                                 corner_radius=20, border_width=2, border_color="dark red",
                                 hover_color="#ff6666")
         self.discard_button.pack_forget()
 
-        self.save_hint_label = CTkLabel(root, text="Press 'Ctrl + S' to save the screenshot")
+        self.save_hint_label = CTkLabel(self.scrollable_frame, text="Press 'Ctrl + S' to save the screenshot")
         self.save_hint_label.pack_forget()
 
-        self.discard_hint_label = CTkLabel(root, text="Press 'Ctrl + Del' to discard the screenshot")
+        self.discard_hint_label = CTkLabel(self.scrollable_frame, text="Press 'Ctrl + Del' to discard the screenshot")
         self.discard_hint_label.pack_forget()
 
-        root.bind("<Control-s>", self.save_screenshot)
-        root.bind("<Control-Delete>", self.discard_screenshot)
+        root.bind("<Control-s>", self._on_ctrl_s)
+        root.bind("<Control-Delete>", self._on_ctrl_delete)
+        self.root.bind("<Return>", self.handle_enter_key)
 
         # Set default values...
         self.toggle_mode()
@@ -207,6 +209,19 @@ class ScreenshotApp():
     def update_scrollregion(self):
         """Sets the scroll area to the bounding box that contains all items in the canvas."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _on_ctrl_s(self, event):
+        if self.monitoring_started:
+            self.save_screenshot()
+
+    def _on_ctrl_delete(self, event):
+        if self.monitoring_started:
+            self.discard_screenshot()
+
+    def handle_enter_key(self, event=None):
+        if not self.monitoring_started:
+            self.start_monitoring()
+
 
     ## ====================
     ## ==USER PREFERENCES==
@@ -364,13 +379,15 @@ class ScreenshotApp():
                             self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
 
         # Hide initial setup UI
-        for widget in self.root.winfo_children():
+        for widget in self.scrollable_frame.winfo_children():
             widget.pack_forget()
         
-        self.screenshot_label = CTkLabel(self.root, text="No new screenshots taken")
+        self.screenshot_label = CTkLabel(self.scrollable_frame, text="No new screenshots taken")
         self.screenshot_label.pack(pady=50)
         self.image_label.pack()
-        self.settings_menu = SettingsMenu(self.root, self.assets_path)
+        self.settings_menu = SettingsMenu(self.scrollable_frame, self.assets_path)
+        self.update_scrollregion()
+        self.monitoring_started = True
 
         # Start checking clipboard
         self.check_clipboard()
@@ -417,6 +434,7 @@ class ScreenshotApp():
 
         # Convert to CTkImage before setting it
         ctk_image = CTkImage(light_image=resized_image, size=(resized_image.width, resized_image.height))
+        self.screenshot_label.configure(text="New screenshot detected:")
         self.image_label.configure(image=ctk_image)
         self.image_label.image = ctk_image  # Keep a reference!
         self.image_label.pack(pady=5)
