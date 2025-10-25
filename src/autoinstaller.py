@@ -9,6 +9,10 @@ import importlib
 # pip install customtkinter
 
 class AutoInstaller:
+    """
+    Class for automatically checking and installing required Python packages.
+    """
+
     REQUIRED_PACKAGES = {
         "Pillow": "PIL",
         "reportlab": "reportlab",
@@ -18,6 +22,12 @@ class AutoInstaller:
 
     @classmethod
     def ensure_packages(cls):
+        """
+        Class method for ensuring all required packages are installed.
+        Checks if each package can be imported; if not, installs it automatically.
+        After installation, the script restarts itself.
+        :return: Nothing
+        """
         missing = []
         for package, import_name in cls.REQUIRED_PACKAGES.items():
             try:

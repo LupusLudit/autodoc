@@ -9,6 +9,13 @@ from settings import SettingsMenu
 
 class ScreenshotApp():
     def __init__(self, root):
+        """
+        Initialize the ScreenshotApp with all GUI components and settings.
+
+        :param root: The main Tkinter root window.
+        :return: Nothing
+        """
+
         # Window settings / main variables
         self.root = root
         self.assets_path = os.path.join(os.getcwd(), "assets")
@@ -183,21 +190,28 @@ class ScreenshotApp():
         self.toggle_default_class()
 
     def _on_mousewheel(self, event):
-        """Scrolls the canvas when the mouse wheel is used."""
+        """
+        Scroll the canvas when the mouse wheel is used.
+
+        :param event: The mouse wheel event
+        :return: Nothing
+        """
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def adjust_scrollable_frame(self, event):
-        """Adjusts the size of the scrollable frame to match the canvas size."""
-        # Make sure the frame inside always matches the canvas width
+        """
+        Adjust the size of the scrollable frame to match the canvas size.
+
+        :param event: The configure event triggered on canvas resize
+        :return: Nothing
+        """
         canvas_width = event.width
         canvas_height = event.height
         self.canvas.itemconfig(self.scrollable_frame_id, width=canvas_width)
 
-        # Ensure the scrollable_frame has at least the same height as the canvas
-        self.scrollable_frame.update_idletasks() 
+        self.scrollable_frame.update_idletasks()
         frame_height = self.scrollable_frame.winfo_height()
 
-        # If the frame is shorter than the window, stretch it to at least match the canvas height
         if frame_height < canvas_height:
             self.canvas.itemconfig(self.scrollable_frame_id, height=canvas_height)
         else:
@@ -205,30 +219,54 @@ class ScreenshotApp():
 
         self.update_scrollregion()
 
-
     def update_scrollregion(self):
-        """Sets the scroll area to the bounding box that contains all items in the canvas."""
+        """
+        Set the scroll area to the bounding box that contains all items in the canvas.
+
+        :return: Nothing
+        """
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _on_ctrl_s(self, event):
+        """
+        Save the current screenshot when Ctrl+S is pressed.
+
+        :param event: The keyboard event
+        :return: Nothing
+        """
         if self.monitoring_started:
             self.save_screenshot()
 
     def _on_ctrl_delete(self, event):
+        """
+        Discard the current screenshot when Ctrl+Delete is pressed.
+
+        :param event: The keyboard event
+        :return: Nothing
+        """
         if self.monitoring_started:
             self.discard_screenshot()
 
     def handle_enter_key(self, event=None):
+        """
+        Start monitoring clipboard for screenshots when Enter is pressed.
+
+        :param event: Optional keyboard event (default None)
+        :return: Nothing
+        """
         if not self.monitoring_started:
             self.start_monitoring()
-
 
     ## ====================
     ## ==USER PREFERENCES==
     ## ====================
-    
+
     def raise_above_all(self):
-        """Raise the window above all other windows."""
+        """
+        Raise the application window above all other windows.
+
+        :return: Nothing
+        """
         if self.root.state() == 'iconic':
             self.root.deiconify()
 
@@ -237,12 +275,19 @@ class ScreenshotApp():
         self.root.attributes('-topmost', 0)
 
     def minimalize(self):
-        """Minimize the window."""
+        """
+        Minimize the application window.
+
+        :return: Nothing
+        """
         self.root.iconify()
 
-
     def toggle_mode(self):
-        """Show or hide metadata fields based on selected mode."""
+        """
+        Show or hide metadata fields based on the selected mode ('new' or 'existing').
+
+        :return: Nothing
+        """
         self.screenshot_entry.configure(placeholder_text="path/to/screenshot/directory")
         if self.mode_var.get() == "new":
             self.ok_button.pack_forget()
@@ -257,9 +302,12 @@ class ScreenshotApp():
             self.doc_entry.configure(placeholder_text="path/to/the/existing/PDF/file")
             self.directory_label.configure(text="Path To The Existing PDF File:")
 
-
     def toggle_default_dir(self):
-        """Toggle default directory selection."""
+        """
+        Enable or disable using the default screenshot directory.
+
+        :return: Nothing
+        """
         if self.use_default_dir.get():
             self.screenshot_entry.delete(0, "end")
             self.screenshot_dir = self.default_screenshot_dir
@@ -274,7 +322,11 @@ class ScreenshotApp():
             self.toggle_mode()
 
     def toggle_default_class(self):
-        """Toggle default class selection."""
+        """
+        Enable or disable using the default class name.
+
+        :return: Nothing
+        """
         if self.use_default_class.get():
             self.class_entry.delete(0, "end")
             self.class_entry.insert(0, self.default_class)
@@ -289,11 +341,20 @@ class ScreenshotApp():
     ## ===================
 
     def validate_numeric_input(self, value):
-        """Make sure the the input is numeric or empty."""
+        """
+        Validate that the input is numeric or empty.
+
+        :param value: The input string to validate
+        :return: True if the input is numeric or empty, False otherwise
+        """
         return value.isdigit() or value == ""
 
     def set_screenshot_dir(self):
-        """Set the directory where screenshots will be saved."""
+        """
+        Open a directory dialog to set the screenshot save directory.
+
+        :return: Nothing
+        """
         directory = filedialog.askdirectory()
         if directory:
             self.screenshot_dir = directory
@@ -301,7 +362,11 @@ class ScreenshotApp():
             self.screenshot_entry.insert(0, directory)
 
     def browse_doc(self):
-        """Set the PDF file path based on selected mode."""
+        """
+        Open a dialog to set the PDF file or directory based on mode.
+
+        :return: Nothing
+        """
         if self.mode_var.get() == "new":
             file_path = filedialog.askdirectory()
             if file_path:
@@ -314,7 +379,6 @@ class ScreenshotApp():
         else:
             file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
             if file_path:
-                # Check if the selected file exists
                 if not os.path.isfile(file_path):
                     messagebox.showerror("Error", "The selected file path is invalid or does not exist.")
                 else:
@@ -323,27 +387,37 @@ class ScreenshotApp():
                     self.doc_entry.insert(0, file_path)
 
     def update_screenshot_dir(self):
-        """Update the screenshot directory from manual input."""
+        """
+        Update the screenshot directory from the entry field.
+
+        :return: Nothing
+        """
         if self.use_default_dir.get():
             self.screenshot_dir = self.default_screenshot_dir
         else:
             self.screenshot_dir = self.screenshot_entry.get()
+
     def update_class(self):
-        """Update the class from manual input."""
+        """
+        Update the current class from the entry field.
+
+        :return: Nothing
+        """
         if self.use_default_class.get():
             self.current_class = self.default_class
         else:
             self.current_class = self.class_entry.get()
 
-    #add file already exists check if the we are adding a new file
     def update_doc_path(self):
-        """Validate the document path based on the selected mode."""
+        """
+        Update or validate the PDF document path based on the selected mode.
+
+        :return: Nothing
+        """
         file_path = self.doc_entry.get().strip()
 
         if self.mode_var.get() == "new":
-            # Get the entered filename
             file_name = self.fileName_entry.get().strip()
-
             if file_name:
                 self.doc_path = os.path.join(file_path, f"{file_name}.pdf")
             else:
@@ -352,8 +426,11 @@ class ScreenshotApp():
             self.doc_path = file_path
 
     def start_monitoring(self):
-        """Start monitoring clipboard for screenshots."""
-        
+        """
+        Start monitoring the clipboard for new screenshots.
+
+        :return: Nothing
+        """
         if not self.screenshot_dir or not self.doc_path:
             messagebox.showwarning("Warning", "Please select valid directories first!")
             return
@@ -362,14 +439,12 @@ class ScreenshotApp():
             messagebox.showwarning("Warning", "Please select a valid screenshot directory")
             return
 
-        # If in 'new' mode, check if the directory exists instead of checking for a file
         if self.mode_var.get() == "new":
             doc_dir = os.path.dirname(self.doc_path)
             if not os.path.isdir(doc_dir):
                 messagebox.showwarning("Warning", "Please select a valid directory for the PDF file.")
                 return
         else:
-            # For 'existing' mode, check if the file exists and is a valid PDF
             if not (os.path.isfile(self.doc_path) and self.doc_path.lower().endswith(".pdf")):
                 messagebox.showwarning("Warning", "Please select an existing PDF file.")
                 return
@@ -378,7 +453,6 @@ class ScreenshotApp():
         self.doc = PdfSaver(self.prompt_mode_var.get(), self.doc_path, self.title_entry.get().strip(), self.exercise_entry.get().strip(),
                             self.name_entry.get().strip(), self.surname_entry.get().strip(), self.class_entry.get().strip())
 
-        # Hide initial setup UI
         for widget in self.scrollable_frame.winfo_children():
             widget.pack_forget()
         
@@ -388,13 +462,15 @@ class ScreenshotApp():
         self.settings_menu = SettingsMenu(self.scrollable_frame, self.assets_path)
         self.update_scrollregion()
         self.monitoring_started = True
-
-        # Start checking clipboard
         self.check_clipboard()
 
 
     def check_clipboard(self):
-        """Continuously monitor the clipboard for new screenshots."""
+        """
+        Continuously monitor the clipboard for new screenshots and display them.
+
+        :return: Nothing
+        """
         try:
             image = ImageGrab.grabclipboard()
             if isinstance(image, ImageGrab.Image.Image) and image != self.previous_image:
@@ -406,37 +482,35 @@ class ScreenshotApp():
             print("\nStopping clipboard monitoring. Goodbye!")
 
     def display_screenshot(self, image):
-        """Display the screenshot in the UI for user approval."""
+        """
+        Display a screenshot in the UI for user approval.
+
+        :param image: The PIL Image object from the clipboard
+        :return: Nothing
+        """
         if self.settings_menu.auto_popUp.get():
             self.raise_above_all()
-        self.current_screenshot = image.copy()  # Keep the full-quality image for saving
+        self.current_screenshot = image.copy()
 
-        # Get the image size
         width, height = image.size
-        
-        # Define a maximum width and height for the display
         max_width, max_height = 400, 300
-
-        # Calculate the aspect ratio
         aspect_ratio = width / height
 
-        # Resize the image while maintaining the aspect ratio
         if width > max_width or height > max_height:
-            if aspect_ratio > 1:  # Landscape image
+            if aspect_ratio > 1:
                 new_width = max_width
                 new_height = int(new_width / aspect_ratio)
-            else:  # Portrait or square image
+            else:
                 new_height = max_height
                 new_width = int(new_height * aspect_ratio)
             resized_image = image.resize((new_width, new_height))
         else:
             resized_image = image
 
-        # Convert to CTkImage before setting it
         ctk_image = CTkImage(light_image=resized_image, size=(resized_image.width, resized_image.height))
         self.screenshot_label.configure(text="New screenshot detected:")
         self.image_label.configure(image=ctk_image)
-        self.image_label.image = ctk_image  # Keep a reference!
+        self.image_label.image = ctk_image
         self.image_label.pack(pady=5)
         self.prompt_label.pack(pady=5)
         self.prompt_entry.pack(pady=5)
@@ -446,7 +520,12 @@ class ScreenshotApp():
         self.discard_hint_label.pack(pady=5)
 
     def save_screenshot(self, event=None):
-        """Saves the screenshot and user-provided description to the document."""
+        """
+        Save the current screenshot and user-provided description to the PDF document.
+
+        :param event: Optional keyboard event (default None)
+        :return: Nothing
+        """
         if self.current_screenshot is None:
             return
 
@@ -456,7 +535,6 @@ class ScreenshotApp():
         self.prompt_entry.delete("1.0", "end")
 
         try:
-            # Save the screenshot as a PNG
             self.current_screenshot.save(filename, "PNG")
             self.doc.addImage(filename, description)
             print(f"Screenshot saved: {filename}")
@@ -470,7 +548,12 @@ class ScreenshotApp():
             self.minimalize()
 
     def discard_screenshot(self, event=None):
-        """Discards the current screenshot."""
+        """
+        Discard the current screenshot and reset the UI.
+
+        :param event: Optional keyboard event (default None)
+        :return: Nothing
+        """
         self.current_screenshot = None
         self.reset_screen()
         self.prompt_entry.delete("1.0", "end")
@@ -482,7 +565,11 @@ class ScreenshotApp():
             self.minimalize()
 
     def reset_screen(self):
-        """Resets the UI back to 'no new screenshots' state."""
+        """
+        Reset the UI to the default 'no new screenshots' state.
+
+        :return: Nothing
+        """
         self.screenshot_label.configure(text="No new screenshots taken")
         self.prompt_label.pack_forget()
         self.prompt_entry.pack_forget()
@@ -490,12 +577,9 @@ class ScreenshotApp():
         self.discard_button.pack_forget()
         self.save_hint_label.pack_forget()
         self.discard_hint_label.pack_forget()
-        self.image_label.configure(image="")  # Clear image preview
-        self.image_label.pack_forget()  # Hide image label
+        self.image_label.configure(image="")
+        self.image_label.pack_forget()
         self.current_screenshot = None
 
-        # Clear the clipboard to prevent the same screenshot from being detected again
         self.root.clipboard_clear()
-        
-        # Delay clipboard checking to ensure the UI resets properly
         self.root.after(1500, self.check_clipboard)

@@ -8,8 +8,20 @@ from reportlab.lib.pagesizes import letter
 from PIL import Image
 from PyPDF2 import PdfReader, PdfWriter
 from datetime import datetime
+
 class PdfSaver:
     def __init__(self, prompt_mode="regular", filename="", title="", exercise_number="", name="", surname="", student_class=""):
+        """
+        Constructor for initializing a PdfSaver instance
+        :param prompt_mode: Mode for numbering descriptions ("regular" or "numbered")
+        :param filename: The name of the PDF file to create or append to
+        :param title: The title of the PDF document
+        :param exercise_number: Exercise number to display on the first page
+        :param name: The student's first name
+        :param surname: The student's last name
+        :param student_class: The class of the student
+        :return: Nothing
+        """
         self.filename = filename
         self.title = title
         self.count = 1
@@ -32,6 +44,10 @@ class PdfSaver:
             self.count, self.prompt_mode = self.load_count()  # Load both count and mode
 
     def register_fonts(self):
+        """
+        Method for registering custom fonts for PDF rendering
+        :return: Nothing
+        """
         try:
             pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
             print("Font registration successful")
@@ -39,6 +55,15 @@ class PdfSaver:
             print(f"Font registration failed: {e}")
 
     def create_pdf(self, exercise_number, title, name, surname, student_class):
+        """
+        Method for creating the initial PDF document with header and student information
+        :param exercise_number: The exercise number to display
+        :param title: The title of the document
+        :param name: The student's first name
+        :param surname: The student's last name
+        :param student_class: The class of the student
+        :return: Nothing
+        """
         self.pdf = canvas.Canvas(self.filename)
         self.pdf.setTitle(title)
 
@@ -57,6 +82,10 @@ class PdfSaver:
         print("Creating PDF")
 
     def appendPage(self):
+        """
+        Method for appending a newly generated temporary PDF page to the main document
+        :return: Nothing
+        """
         writer = PdfWriter()
         with open(self.filename, "rb") as existing_file:
             reader = PdfReader(existing_file)
@@ -72,6 +101,12 @@ class PdfSaver:
         print("Appending page")
 
     def addImage(self, path, description):
+        """
+        Method for adding an image with an optional description to the PDF
+        :param path: Path to the image file
+        :param description: Description text to display above the image
+        :return: Nothing
+        """
         self.pdf = canvas.Canvas(self.temporary_addition_path) 
         self.pdf.setTitle(self.title) 
 
@@ -109,6 +144,13 @@ class PdfSaver:
         print("Adding image")
 
     def wrap_text(self, description, font_size, max_width):
+        """
+        Method for wrapping text into multiple lines based on the maximum width
+        :param description: Text to wrap
+        :param font_size: Font size used for measuring text width
+        :param max_width: Maximum allowed width for a single line
+        :return: List of wrapped text lines
+        """
         lines = []
         self.pdf.setFont('DejaVuSans', font_size)
 
@@ -133,9 +175,18 @@ class PdfSaver:
         return lines
 
     def get_file_key(self, filename):
+        """
+        Method for generating a unique hash key for a given filename
+        :param filename: The filename for which to generate a key
+        :return: MD5 hash string representing the file key
+        """
         return hashlib.md5(os.path.abspath(filename).encode()).hexdigest()
 
     def save_count(self):
+        """
+        Method for saving the current image count and prompt mode into a JSON file
+        :return: Nothing
+        """
         count_file = os.path.join(self.include_path, "count.json")
         file_key = self.get_file_key(self.filename)
 
@@ -157,6 +208,10 @@ class PdfSaver:
             json.dump(count_data, file, indent=4)
 
     def load_count(self):
+        """
+        Method for loading the saved image count and prompt mode from a JSON file
+        :return: Tuple containing count (int) and prompt_mode (str)
+        """
         count_file = os.path.join(self.include_path, "count.json")
         file_key = self.get_file_key(self.filename)
         if os.path.exists(count_file):
