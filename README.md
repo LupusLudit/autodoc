@@ -10,7 +10,7 @@ The program also offers several user-configurable settings:
 ## Requirements
 Python installed on your computer.
 Recomended python version: 3.13.1 or newer:
-[python download](https://www.python.org/downloads/)
+[python download](https://www.python.org/downloads/).
 The program includes an auto-installer that should automatically install all required packages. If installation fails, manually run the following commands:
 ```
 pip install Pillow
