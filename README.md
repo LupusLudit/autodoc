@@ -1,32 +1,28 @@
 # Autodoc
-Written in python. This program automaticly detects screenshots from your clipboard and copies them into a pdf file.
-You can add a description for each screenshot, this text would later be displayed in the pdf file with the said screenshot.
-The program features some basic user settings:
+Autodoc is a Python program that automatically detects screenshots from your clipboard and compiles them into a PDF file. You can add a description for each screenshot, which will later appear alongside the image in the PDF.
+The program also offers several user-configurable settings:
 
-* Dark mode / light mode theme selection
-* Automatic window pop up => makes the window "pop up" if it was minimalized and puts it into foreground right after creating a screenshot
-* Automatic window minimalization => minimalizes the window after the user saved/discarded a screenshot
-* Automatic alerts => after saving or discarding a screenshot an alert will show up (or not show up depending on users settings) telling the user if the operation was successful.
+* Theme Selection: Choose between dark mode or light mode.
+* Automatic Window Pop-Up: Brings the application window to the foreground immediately after taking a screenshot.
+* Automatic Window Minimization: Minimizes the window after saving or discarding a screenshot.
+* Automatic Alerts: Displays a notification after saving or discarding a screenshot (optional).
 
 ## Requirements
-You need to have python installed on your computer.
+* Python installed on your computer.
 Recomended python version: 3.13.1 or newer:
 [python download](https://www.python.org/downloads/)
-The program also features a autoinstaller that should automaticly install are reqiered packages. In case something goes wrong, run these commands:
+The program includes an auto-installer that should automatically install all required packages. If installation fails, manually run the following commands:
 ```
 pip install Pillow
 pip install PyPDF2
 pip install reportlab
 pip install customtkinter
 ```
-That should install all necessary packages.
+These commands will install all necessary dependencies.
 
 ## Running the program
-To run the program, you need to use the run_autodoc.bat file. Running the program directly by using the .py files might result in an error.
-The reason behind this is the fact that the program assumes that the directory from which we run the program is the one where the run_autodoc.bat file is contained and all the filepaths used
-in the code are set accordingly.
+Use the run_autodoc.bat file to launch the program. Running the .py files directly may cause errors because the program assumes it is executed from the directory containing run_autodoc.bat, with all file paths set accordingly.
 
 ## Important note
-Beware that this code was originally intended to be a helper tool to complete school exercises more quickly. For that reason, it includes fields like “exercise number” or “school class.”
-It was written in a way to fulfill my professor’s wishes, meaning that some fields in the PDF document are written in Czech (for example, Datum — meaning date).
-Therefore, if you intend to use the code for your own purposes, some adjustments will be necessary. You are, of course, free to rewrite the code in whatever way you find suitable.
+This program was originally designed as a helper tool for school exercises. As such, it includes fields like “exercise number” and “school class,” and some PDF fields are in Czech (e.g., Datum = Date).
+If you plan to use the program for your own purposes, you may need to adjust these fields. Feel free to modify the code as you see fit.
